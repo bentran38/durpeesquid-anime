@@ -1,8 +1,9 @@
 // Anime tracker: search Jikan/TMDB (through the media-search Edge Function), keep a personal
-// library in public.tracker_entries, and total up time watched.
+// library in anime.tracker_entries, and total up time watched.
 import { supabase, requireLogin, hasAccess, signOut, HOME } from 'https://www.durpeesquid.com/auth.js';
 
 const SLUG = 'anime';
+const db = supabase.schema('anime'); // this project's tables live in the `anime` schema
 const STATUSES = [
   ['planned', 'Planned'],
   ['watching', 'Watching'],
@@ -117,7 +118,7 @@ function poster(url, alt, className) {
 
 async function addEntry(r) {
   const { entry } = await lookup({ action: 'details', source: r.source, id: r.source_id });
-  const { data, error } = await supabase.from('tracker_entries').insert(entry).select().single();
+  const { data, error } = await db.from('tracker_entries').insert(entry).select().single();
   if (error) throw new Error(error.code === '23505' ? 'already in your library' : error.message);
   entries.unshift(data);
   renderAll();
@@ -128,7 +129,7 @@ async function addEntry(r) {
 async function patch(entry, changes, savedEl) {
   Object.assign(entry, changes);
   if (savedEl) savedEl.textContent = 'Saving…';
-  const { error } = await supabase.from('tracker_entries').update(changes).eq('id', entry.id);
+  const { error } = await db.from('tracker_entries').update(changes).eq('id', entry.id);
   if (savedEl) savedEl.textContent = error ? `Not saved: ${error.message}` : 'Saved';
   renderStats();
   return !error;
@@ -217,7 +218,7 @@ function entryCard(e) {
   const remove = el('button', { type: 'button', className: 'danger', textContent: 'Remove' });
   remove.onclick = async () => {
     if (!confirm(`Remove "${e.title}" from your library? Its rating and notes will be deleted.`)) return;
-    const { error } = await supabase.from('tracker_entries').delete().eq('id', e.id);
+    const { error } = await db.from('tracker_entries').delete().eq('id', e.id);
     if (error) return (saved.textContent = `Not removed: ${error.message}`);
     entries = entries.filter((x) => x.id !== e.id);
     renderAll();
@@ -312,7 +313,7 @@ $('search-form').onsubmit = runSearch;
 for (const id of ['filter-status', 'sort']) $(id).onchange = renderLibrary;
 $('filter-text').oninput = renderLibrary;
 
-const { data, error } = await supabase.from('tracker_entries').select('*');
+const { data, error } = await db.from('tracker_entries').select('*');
 if (error) $('empty').textContent = `Could not load your library: ${error.message}`;
 entries = data ?? [];
 renderAll();

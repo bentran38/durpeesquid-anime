@@ -2,7 +2,12 @@
 -- when a title is added so the library works without calling those APIs again.
 -- Only users with access to the 'anime' project (public.project_access) can touch their rows.
 
-create table public.tracker_entries (
+-- Everything for this project lives in its own schema, separate from the main dashboard's `public`.
+-- The schema must also be listed under Settings > API > Exposed schemas so the client can reach it.
+create schema if not exists anime;
+grant usage on schema anime to authenticated, service_role;
+
+create table anime.tracker_entries (
   id               uuid primary key default gen_random_uuid(),
   user_id          uuid not null default auth.uid() references auth.users (id) on delete cascade,
 
@@ -32,9 +37,9 @@ create table public.tracker_entries (
   unique (user_id, source, source_id)
 );
 
-create index tracker_entries_user_idx on public.tracker_entries (user_id);
+create index tracker_entries_user_idx on anime.tracker_entries (user_id);
 
-create function public.tracker_touch() returns trigger
+create function anime.tracker_touch() returns trigger
 language plpgsql set search_path = '' as $$
 begin
   new.updated_at = now();
@@ -42,17 +47,17 @@ begin
 end $$;
 
 create trigger tracker_entries_touch
-  before update on public.tracker_entries
-  for each row execute function public.tracker_touch();
+  before update on anime.tracker_entries
+  for each row execute function anime.tracker_touch();
 
-alter table public.tracker_entries enable row level security;
+alter table anime.tracker_entries enable row level security;
 
-revoke all on public.tracker_entries from anon, authenticated;
-grant select, insert, update, delete on public.tracker_entries to authenticated;
-grant all on public.tracker_entries to service_role;
+revoke all on anime.tracker_entries from anon, authenticated;
+grant select, insert, update, delete on anime.tracker_entries to authenticated;
+grant all on anime.tracker_entries to service_role;
 
 create policy "manage own tracker entries"
-  on public.tracker_entries for all to authenticated
+  on anime.tracker_entries for all to authenticated
   using (
     user_id = (select auth.uid())
     and exists (

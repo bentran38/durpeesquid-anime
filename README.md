@@ -13,7 +13,7 @@ Static site (no framework), same Supabase project and shared login as
 
 ## One-time setup
 
-1. **Migration:** apply `supabase/migrations/20261014000000_tracker_entries.sql` to the shared Supabase project.
+1. **Migration:** apply `supabase/migrations/20261014000000_tracker_entries.sql` to the shared Supabase project. It creates the `anime` schema; add `anime` under Settings > API > Exposed schemas.
 2. **Project row:** add an `anime` project in the admin dashboard (slug `anime`, url `https://anime.durpeesquid.com`)
    and give your user access. The table's RLS and the Edge Function both require `project_access` for slug `anime`.
 3. **TMDB token:** create a free TMDB account, request an API key, and set the "API Read Access Token":

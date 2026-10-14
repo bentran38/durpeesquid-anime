@@ -27,12 +27,16 @@ create table anime.tracker_entries (
                    check (status in ('planned', 'watching', 'completed', 'on_hold', 'dropped')),
   episodes_watched int  not null default 0 check (episodes_watched >= 0),
   rewatch_count    int  not null default 0 check (rewatch_count >= 0),
+  started_on       date,                                 -- when the user began watching
+  finished_on      date,                                 -- when the user finished
   -- 0.5 to 10 in half-point steps (1.5, 2.5, ...); null = unrated
   rating           numeric(3, 1) check (rating >= 0.5 and rating <= 10 and rating * 2 = trunc(rating * 2)),
   notes            text not null default '',
 
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now(),
+
+  check (finished_on is null or started_on is null or finished_on >= started_on),
 
   unique (user_id, source, source_id)
 );

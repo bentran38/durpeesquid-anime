@@ -141,6 +141,20 @@ function ratingSelect(value) {
   return select;
 }
 
+const today = () => new Date().toLocaleDateString('en-CA'); // local date as YYYY-MM-DD
+
+// Dates to fill in when a status is chosen: starting a show stamps "started", finishing stamps "finished".
+// Only empty fields are filled, so dates the user typed are never overwritten.
+function datesFor(status, startedOn, finishedOn) {
+  const changes = {};
+  if (status === 'watching' && !startedOn) changes.started_on = today();
+  if (status === 'completed' && !finishedOn) changes.finished_on = today();
+  return changes;
+}
+
+const datesError = (started, finished) =>
+  started && finished && finished < started ? 'The finish date is before the start date.' : null;
+
 // Shows the chosen title and asks for status, progress, rating and notes before saving.
 // The full details (episode count, studios, ...) load in the background.
 function openAddDialog(r) {
@@ -155,6 +169,8 @@ function openAddDialog(r) {
   const watchedLabel = labeled('Episodes watched', watched);
   watchedLabel.hidden = true;
   const rewatches = el('input', { type: 'number', min: 0, value: 0 });
+  const started = el('input', { type: 'date' });
+  const finished = el('input', { type: 'date' });
   const notes = el('textarea', { placeholder: 'Notes', ariaLabel: `Notes for ${r.title}` });
   const save = el('button', { type: 'submit', textContent: 'Add to library', disabled: true });
   const cancel = el('button', { type: 'button', className: 'ghost', textContent: 'Cancel', onclick: () => dlg.close() });
@@ -167,7 +183,12 @@ function openAddDialog(r) {
     else if (status.value === 'completed' && total != null) watched.value = total;
     watched.disabled = status.value === 'planned' || (status.value === 'completed' && total != null);
   };
-  status.onchange = syncEpisodes;
+  status.onchange = () => {
+    syncEpisodes();
+    const fill = datesFor(status.value, started.value, finished.value);
+    if (fill.started_on) started.value = fill.started_on;
+    if (fill.finished_on) finished.value = fill.finished_on;
+  };
 
   const sub = [r.type, r.year, r.episodes ? `${r.episodes} eps` : null].filter(Boolean).join(' · ');
   const form = el(
@@ -186,6 +207,8 @@ function openAddDialog(r) {
       watchedLabel,
       labeled('Rating /10', rating),
       labeled('Rewatches', rewatches),
+      labeled('Started', started),
+      labeled('Finished', finished),
     ),
     notes,
     msg,
@@ -195,6 +218,11 @@ function openAddDialog(r) {
   form.onsubmit = async (ev) => {
     ev.preventDefault();
     if (!details) return;
+    const bad = datesError(started.value, finished.value);
+    if (bad) {
+      msg.textContent = bad;
+      return;
+    }
     save.disabled = true;
     msg.textContent = 'Saving…';
     let n = 0;
@@ -209,6 +237,8 @@ function openAddDialog(r) {
         episodes_watched: n,
         rewatch_count: Math.max(0, Math.floor(Number(rewatches.value) || 0)),
         rating: rating.value === '' ? null : Number(rating.value),
+        started_on: started.value || null,
+        finished_on: finished.value || null,
         notes: notes.value,
       });
       dlg.close();
@@ -275,6 +305,7 @@ function entryCard(e) {
   status.onchange = async () => {
     const changes = { status: status.value };
     if (status.value === 'completed') changes.episodes_watched = e.episodes ?? e.episodes_watched;
+    Object.assign(changes, datesFor(status.value, e.started_on, e.finished_on));
     await patch(e, changes, saved);
     renderLibrary();
   };
@@ -285,11 +316,30 @@ function entryCard(e) {
     if ($('sort').value === 'rating') renderLibrary();
   };
 
+  // A bad range is rejected up front and the input snaps back to the saved value.
+  const dateInput = (field, other) => {
+    const input = el('input', { type: 'date', value: e[field] ?? '' });
+    input.onchange = async () => {
+      const value = input.value || null;
+      const bad = field === 'started_on' ? datesError(value, e[other]) : datesError(e[other], value);
+      if (bad) {
+        input.value = e[field] ?? '';
+        saved.textContent = `Not saved: ${bad}`;
+        return;
+      }
+      await patch(e, { [field]: value }, saved);
+      if ($('sort').value === 'finished') renderLibrary();
+    };
+    return input;
+  };
+
   const controls = el(
     'div',
     { className: 'controls' },
     labeled('Status', status),
     labeled('Rating /10', rating),
+    labeled('Started', dateInput('started_on', 'finished_on')),
+    labeled('Finished', dateInput('finished_on', 'started_on')),
   );
 
   if (e.kind === 'series') {
@@ -391,6 +441,7 @@ const SORTS = {
   title: (a, b) => a.title.localeCompare(b.title),
   release: (a, b) => (b.release_date ?? '').localeCompare(a.release_date ?? ''),
   time: (a, b) => minutesWatched(b) - minutesWatched(a),
+  finished: (a, b) => (b.finished_on ?? '').localeCompare(a.finished_on ?? ''),
 };
 
 function renderLibrary() {

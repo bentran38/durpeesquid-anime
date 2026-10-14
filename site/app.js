@@ -552,21 +552,41 @@ async function runImport(file) {
   }
 }
 
+// Each category sorts by `get`; `desc` is its natural direction (newest, highest, A to Z...).
+// The direction button flips it. Entries with no value (unrated, no date) always sort last.
 const SORTS = {
-  added: (a, b) => b.created_at.localeCompare(a.created_at),
-  rating: (a, b) => (b.rating ?? -1) - (a.rating ?? -1),
-  title: (a, b) => a.title.localeCompare(b.title),
-  release: (a, b) => (b.release_date ?? '').localeCompare(a.release_date ?? ''),
-  time: (a, b) => minutesWatched(b) - minutesWatched(a),
-  finished: (a, b) => (b.finished_on ?? '').localeCompare(a.finished_on ?? ''),
+  added: { get: (e) => e.created_at, desc: true, label: { desc: 'Newest first', asc: 'Oldest first' } },
+  rating: { get: (e) => (e.rating == null ? null : Number(e.rating)), desc: true, label: { desc: 'High to low', asc: 'Low to high' } },
+  title: { get: (e) => e.title, desc: false, label: { desc: 'Z to A', asc: 'A to Z' } },
+  release: { get: (e) => e.release_date, desc: true, label: { desc: 'Newest first', asc: 'Oldest first' } },
+  time: { get: (e) => minutesWatched(e), desc: true, label: { desc: 'Most first', asc: 'Least first' } },
+  finished: { get: (e) => e.finished_on, desc: true, label: { desc: 'Newest first', asc: 'Oldest first' } },
 };
+let sortDesc = SORTS.added.desc;
+
+function compareBy(sort) {
+  return (a, b) => {
+    const va = sort.get(a);
+    const vb = sort.get(b);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+    return sortDesc ? -cmp : cmp;
+  };
+}
+
+function updateSortButton() {
+  const sort = SORTS[$('sort').value];
+  $('sort-dir').textContent = `${sortDesc ? '↓' : '↑'} ${sort.label[sortDesc ? 'desc' : 'asc']}`;
+}
 
 function renderLibrary() {
   const status = $('filter-status').value;
   const text = $('filter-text').value.trim().toLowerCase();
   const shown = entries
     .filter((e) => (!status || e.status === status) && (!text || e.title.toLowerCase().includes(text)))
-    .sort(SORTS[$('sort').value]);
+    .sort(compareBy(SORTS[$('sort').value]));
   $('library').replaceChildren(...shown.map((e, i) => entryCard(e, i + 1)));
   $('empty').hidden = entries.length > 0;
   syncToggleAll();
@@ -646,7 +666,18 @@ $('search-q').onkeydown = (ev) => {
     runSearch();
   }
 };
-for (const id of ['filter-status', 'sort']) $(id).onchange = renderLibrary;
+$('filter-status').onchange = renderLibrary;
+$('sort').onchange = () => {
+  sortDesc = SORTS[$('sort').value].desc; // each category starts in its natural direction
+  updateSortButton();
+  renderLibrary();
+};
+$('sort-dir').onclick = () => {
+  sortDesc = !sortDesc;
+  updateSortButton();
+  renderLibrary();
+};
+updateSortButton();
 $('filter-text').oninput = renderLibrary;
 $('toggle-all').onclick = toggleAll;
 $('layout-list').onclick = () => setLayout('list');

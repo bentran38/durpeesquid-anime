@@ -1,11 +1,9 @@
-// Metadata lookup for the anime tracker: Jikan (MyAnimeList data, no key) for anime, TMDB for movies.
-// Runs server-side so the TMDB token never reaches the browser and Jikan's rate limit is shared.
+// Metadata lookup for the anime tracker: Jikan (MyAnimeList data, no key). Runs server-side so
+// Jikan's rate limit is shared.
 // verify_jwt is off at the gateway; the checks below verify the caller on every call.
 //
-//   POST { action: 'search',  source: 'jikan' | 'tmdb', q: string }
-//   POST { action: 'details', source: 'jikan' | 'tmdb', id: string }
-//
-// Secret: TMDB_READ_TOKEN (TMDB "API Read Access Token").
+//   POST { action: 'search',  source: 'jikan', q: string }
+//   POST { action: 'details', source: 'jikan', id: string }
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const PROJECT_SLUG = 'anime';
@@ -82,47 +80,6 @@ async function jikanDetails(id: string) {
   };
 }
 
-// ---- TMDB -----------------------------------------------------------------------------------
-
-const TMDB = 'https://api.themoviedb.org/3';
-const tmdbInit = () => {
-  const token = Deno.env.get('TMDB_READ_TOKEN');
-  if (!token) throw new Error('TMDB_READ_TOKEN is not set');
-  return { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } };
-};
-const tmdbPoster = (p: string | null) => (p ? `https://image.tmdb.org/t/p/w342${p}` : null);
-
-async function tmdbSearch(q: string) {
-  const j = await getJson(`${TMDB}/search/movie?query=${encodeURIComponent(q)}&include_adult=false`, tmdbInit());
-  return (j.results ?? []).slice(0, 12).map((m: any) => ({
-    source: 'tmdb',
-    source_id: String(m.id),
-    title: m.title,
-    type: 'Movie',
-    year: dateOnly(m.release_date)?.slice(0, 4) ?? null,
-    episodes: null,
-    poster_url: tmdbPoster(m.poster_path),
-  }));
-}
-
-async function tmdbDetails(id: string) {
-  if (!/^\d+$/.test(id)) throw new Error('Bad id');
-  const m = await getJson(`${TMDB}/movie/${id}?append_to_response=credits`, tmdbInit());
-  return {
-    source: 'tmdb',
-    source_id: String(m.id),
-    kind: 'movie',
-    title: m.title,
-    directors: (m.credits?.crew ?? []).filter((c: any) => c.job === 'Director').map((c: any) => c.name),
-    studios: (m.production_companies ?? []).map((c: any) => c.name),
-    release_date: dateOnly(m.release_date),
-    episodes: null,
-    episode_minutes: null,
-    runtime_minutes: m.runtime || null,
-    poster_url: tmdbPoster(m.poster_path),
-  };
-}
-
 // ---- handler --------------------------------------------------------------------------------
 
 Deno.serve(async (req) => {
@@ -160,17 +117,17 @@ Deno.serve(async (req) => {
     return reply(400, { error: 'Invalid JSON' });
   }
   const { action, source } = body;
-  if (source !== 'jikan' && source !== 'tmdb') return reply(400, { error: 'Unknown source' });
+  if (source !== 'jikan') return reply(400, { error: 'Unknown source' });
 
   try {
     if (action === 'search') {
       const q = typeof body.q === 'string' ? body.q.trim().slice(0, 100) : '';
       if (q.length < 2) return reply(400, { error: 'Search needs at least 2 characters' });
-      return reply(200, { results: await (source === 'jikan' ? jikanSearch(q) : tmdbSearch(q)) });
+      return reply(200, { results: await jikanSearch(q) });
     }
     if (action === 'details') {
       const id = String(body.id ?? '');
-      return reply(200, { entry: await (source === 'jikan' ? jikanDetails(id) : tmdbDetails(id)) });
+      return reply(200, { entry: await jikanDetails(id) });
     }
     return reply(400, { error: 'Unknown action' });
   } catch (e) {

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Personal anime and movie tracker" />
+    <meta name="description" content="Personal anime tracker" />
     <meta name="theme-color" content="#0a0a0b" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="/style.css" />
@@ -23,11 +23,7 @@
 
       <section class="panel">
         <form id="search-form" class="row">
-          <select id="search-source" aria-label="Source">
-            <option value="jikan">Anime</option>
-            <option value="tmdb">Movie</option>
-          </select>
-          <input id="search-q" type="search" placeholder="Search to add a title" autocomplete="off" required minlength="2" />
+          <input id="search-q" type="search" placeholder="Search anime to add" autocomplete="off" required minlength="2" />
           <button type="submit">Search</button>
         </form>
         <p id="search-msg" class="muted" role="status"></p>
@@ -57,9 +53,7 @@
       <p id="empty" class="muted" hidden>Nothing here yet. Search above to add your first title.</p>
 
       <footer class="muted">
-        Anime data from <a href="https://jikan.moe">Jikan</a> (MyAnimeList). Movie data and images from
-        <a href="https://www.themoviedb.org">TMDB</a>; this product uses the TMDB API but is not endorsed or
-        certified by TMDB.
+        Anime data from <a href="https://jikan.moe">Jikan</a> (MyAnimeList).
       </footer>
     </main>
     <script type="module" src="/app.js"></script>

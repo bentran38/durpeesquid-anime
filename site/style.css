@@ -150,3 +150,11 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
 .report { margin-top: 8px; font-size: 0.9rem; color: var(--muted); }
 .report summary { cursor: pointer; }
 .report ul { margin: 6px 0 0; padding-left: 20px; max-height: 200px; overflow-y: auto; }
+
+/* Position in the current order (follows the filter and sort). */
+.entry { position: relative; }
+.rank { flex: none; align-self: center; min-width: 2ch; text-align: center; font-weight: 700; font-size: 1.1rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.library[data-layout=grid] .rank {
+  position: absolute; top: 22px; left: 22px; z-index: 1; align-self: auto; min-width: 28px; padding: 2px 8px; border-radius: 999px;
+  background: rgba(10, 10, 11, 0.8); color: var(--text); font-size: 0.85rem;
+}

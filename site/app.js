@@ -293,7 +293,8 @@ async function patch(entry, changes, savedEl) {
   return !error;
 }
 
-function entryCard(e) {
+// `position` is the entry's place in the list as currently filtered and sorted.
+function entryCard(e, position) {
   const saved = el('span', { className: 'saved' });
   const li = el('li', { className: 'entry' });
   li.dataset.id = e.id;
@@ -454,6 +455,7 @@ function entryCard(e) {
   refreshSummary();
   refreshTime();
   li.append(
+    el('span', { className: 'rank', textContent: String(position), title: `Position ${position}` }),
     poster(e.poster_url, e.title, 'poster'),
     el(
       'div',
@@ -565,7 +567,7 @@ function renderLibrary() {
   const shown = entries
     .filter((e) => (!status || e.status === status) && (!text || e.title.toLowerCase().includes(text)))
     .sort(SORTS[$('sort').value]);
-  $('library').replaceChildren(...shown.map(entryCard));
+  $('library').replaceChildren(...shown.map((e, i) => entryCard(e, i + 1)));
   $('empty').hidden = entries.length > 0;
   syncToggleAll();
 }

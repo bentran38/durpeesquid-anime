@@ -1,4 +1,4 @@
-// Anime tracker: search Jikan (through the media-search Edge Function), keep a personal
+// Anime tracker: search AniList (through the media-search Edge Function), keep a personal
 // library in anime.tracker_entries, and total up time watched.
 import { supabase, requireLogin, hasAccess, signOut, HOME } from 'https://www.durpeesquid.com/auth.js';
 
@@ -75,7 +75,7 @@ async function runSearch(ev) {
   list.replaceChildren();
   msg.textContent = 'Searching…';
   try {
-    const { results } = await lookup({ action: 'search', source: 'jikan', q: $('search-q').value });
+    const { results } = await lookup({ action: 'search', source: 'anilist', q: $('search-q').value });
     msg.textContent = results.length ? '' : 'No results.';
     for (const r of results) list.append(resultRow(r));
   } catch (e) {

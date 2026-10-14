@@ -5,7 +5,7 @@ Static site (no framework), same Supabase project and shared login as
 [durpeesquid](https://github.com/bentran38/durpeesquid): `site/app.js` imports
 `https://www.durpeesquid.com/auth.js`, so the cookie session carries over.
 
-- Metadata: [Jikan](https://jikan.moe) (MyAnimeList data, no key), called from the `media-search` Edge Function.
+- Metadata: [AniList](https://anilist.co) (GraphQL, no key), called from the `media-search` Edge Function.
 - Stored per title: title, directors, studios, release date, episode count + minutes per episode (or movie runtime),
   status, episodes watched, rewatch count, rating (0.5 to 10 in half steps), notes.
 - Time watched = first pass (all of it if completed, else episodes watched) + rewatches x one full watch-through.

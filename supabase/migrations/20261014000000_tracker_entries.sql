@@ -1,4 +1,4 @@
--- Personal anime/movie tracker. One row per user per title; metadata is copied from Jikan / TMDB
+-- Personal anime/movie tracker. One row per user per title; metadata is copied from AniList
 -- when a title is added so the library works without calling those APIs again.
 -- Only users with access to the 'anime' project (public.project_access) can touch their rows.
 
@@ -11,7 +11,7 @@ create table anime.tracker_entries (
   id               uuid primary key default gen_random_uuid(),
   user_id          uuid not null default auth.uid() references auth.users (id) on delete cascade,
 
-  source           text not null check (source in ('jikan', 'tmdb')),
+  source           text not null check (source in ('anilist')),
   source_id        text not null,
   kind             text not null check (kind in ('series', 'movie')),
   title            text not null,

@@ -1,9 +1,9 @@
-// Metadata lookup for the anime tracker: Jikan (MyAnimeList data, no key). Runs server-side so
-// Jikan's rate limit is shared.
+// Metadata lookup for the anime tracker: AniList (GraphQL, no key). Runs server-side so
+// the browser never talks to AniList directly.
 // verify_jwt is off at the gateway; the checks below verify the caller on every call.
 //
-//   POST { action: 'search',  source: 'jikan', q: string }
-//   POST { action: 'details', source: 'jikan', id: string }
+//   POST { action: 'search',  source: 'anilist', q: string }
+//   POST { action: 'details', source: 'anilist', id: string }
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const PROJECT_SLUG = 'anime';
@@ -28,57 +28,79 @@ async function getJson(url: string, init?: RequestInit, retries = 2): Promise<an
   return res.json();
 }
 
-// "24 min per ep" -> 24, "1 hr 55 min" -> 115
-function parseMinutes(s: unknown): number | null {
-  if (typeof s !== 'string') return null;
-  const hr = s.match(/(\d+)\s*hr/i);
-  const min = s.match(/(\d+)\s*min/i);
-  if (!hr && !min) return null;
-  return (hr ? +hr[1] * 60 : 0) + (min ? +min[1] : 0);
+// ---- AniList --------------------------------------------------------------------------------
+
+const ANILIST = 'https://graphql.anilist.co';
+
+async function anilist(query: string, variables: Record<string, unknown>) {
+  const j = await getJson(ANILIST, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ query, variables }),
+  });
+  if (j.errors?.length) throw new Error(`AniList: ${j.errors[0].message}`);
+  return j.data;
 }
 
-const dateOnly = (s: unknown) => (typeof s === 'string' && s.length >= 10 ? s.slice(0, 10) : null);
+const titleOf = (m: any) => m.title?.english || m.title?.romaji || m.title?.native || 'Untitled';
+const FORMAT_LABEL: Record<string, string> = {
+  TV: 'TV', TV_SHORT: 'TV Short', MOVIE: 'Movie', SPECIAL: 'Special', OVA: 'OVA', ONA: 'ONA', MUSIC: 'Music',
+};
 
-// ---- Jikan ----------------------------------------------------------------------------------
-
-const JIKAN = 'https://api.jikan.moe/v4';
-
-async function jikanSearch(q: string) {
-  const j = await getJson(`${JIKAN}/anime?q=${encodeURIComponent(q)}&limit=12&order_by=members&sort=desc`);
-  return (j.data ?? []).map((a: any) => ({
-    source: 'jikan',
-    source_id: String(a.mal_id),
-    title: a.title_english || a.title,
-    type: a.type ?? null,
-    year: a.aired?.prop?.from?.year ?? null,
-    episodes: a.episodes ?? null,
-    poster_url: a.images?.jpg?.image_url ?? null,
+async function anilistSearch(q: string) {
+  const data = await anilist(
+    `query ($q: String) {
+      Page(perPage: 12) {
+        media(search: $q, type: ANIME, sort: POPULARITY_DESC) {
+          id title { english romaji native } format episodes startDate { year } coverImage { large }
+        }
+      }
+    }`,
+    { q },
+  );
+  return (data.Page?.media ?? []).map((m: any) => ({
+    source: 'anilist',
+    source_id: String(m.id),
+    title: titleOf(m),
+    type: FORMAT_LABEL[m.format] ?? m.format ?? null,
+    year: m.startDate?.year ?? null,
+    episodes: m.episodes ?? null,
+    poster_url: m.coverImage?.large ?? null,
   }));
 }
 
-async function jikanDetails(id: string) {
+async function anilistDetails(id: string) {
   if (!/^\d+$/.test(id)) throw new Error('Bad id');
-  const full = (await getJson(`${JIKAN}/anime/${id}/full`)).data;
-  await sleep(450); // stay under Jikan's per-second limit
-  const staff = (await getJson(`${JIKAN}/anime/${id}/staff`)).data ?? [];
-  const directors = staff
-    .filter((s: any) => (s.positions ?? []).some((p: string) => /^(chief |series )?director$/i.test(p)))
-    .map((s: any) => s.person?.name)
+  const { Media: m } = await anilist(
+    `query ($id: Int) {
+      Media(id: $id, type: ANIME) {
+        id title { english romaji native } format episodes duration
+        startDate { year month day } coverImage { extraLarge large }
+        studios(isMain: true) { nodes { name } }
+        staff(sort: RELEVANCE, perPage: 25) { edges { role node { name { full } } } }
+      }
+    }`,
+    { id: Number(id) },
+  );
+  const isMovie = m.format === 'MOVIE';
+  const { year, month, day } = m.startDate ?? {};
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const directors = (m.staff?.edges ?? [])
+    .filter((e: any) => /^(chief |series )?director$/i.test(e.role ?? ''))
+    .map((e: any) => e.node?.name?.full)
     .filter(Boolean);
-  const minutes = parseMinutes(full.duration);
-  const isMovie = full.type === 'Movie';
   return {
-    source: 'jikan',
-    source_id: String(full.mal_id),
+    source: 'anilist',
+    source_id: String(m.id),
     kind: isMovie ? 'movie' : 'series',
-    title: full.title_english || full.title,
-    directors,
-    studios: (full.studios ?? []).map((s: any) => s.name),
-    release_date: dateOnly(full.aired?.from),
-    episodes: isMovie ? null : full.episodes ?? null,
-    episode_minutes: isMovie ? null : minutes,
-    runtime_minutes: isMovie ? minutes : null,
-    poster_url: full.images?.jpg?.large_image_url ?? full.images?.jpg?.image_url ?? null,
+    title: titleOf(m),
+    directors: [...new Set(directors)],
+    studios: (m.studios?.nodes ?? []).map((n: any) => n.name),
+    release_date: year ? `${year}-${pad(month ?? 1)}-${pad(day ?? 1)}` : null,
+    episodes: isMovie ? null : m.episodes ?? null,
+    episode_minutes: isMovie ? null : m.duration ?? null,
+    runtime_minutes: isMovie ? m.duration ?? null : null,
+    poster_url: m.coverImage?.extraLarge ?? m.coverImage?.large ?? null,
   };
 }
 
@@ -119,17 +141,17 @@ Deno.serve(async (req) => {
     return reply(400, { error: 'Invalid JSON' });
   }
   const { action, source } = body;
-  if (source !== 'jikan') return reply(400, { error: 'Unknown source' });
+  if (source !== 'anilist') return reply(400, { error: 'Unknown source' });
 
   try {
     if (action === 'search') {
       const q = typeof body.q === 'string' ? body.q.trim().slice(0, 100) : '';
       if (q.length < 2) return reply(400, { error: 'Search needs at least 2 characters' });
-      return reply(200, { results: await jikanSearch(q) });
+      return reply(200, { results: await anilistSearch(q) });
     }
     if (action === 'details') {
       const id = String(body.id ?? '');
-      return reply(200, { entry: await jikanDetails(id) });
+      return reply(200, { entry: await anilistDetails(id) });
     }
     return reply(400, { error: 'Unknown action' });
   } catch (e) {

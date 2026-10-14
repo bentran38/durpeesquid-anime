@@ -17,7 +17,9 @@ const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SE
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function getJson(url: string, init?: RequestInit, retries = 2): Promise<any> {
-  const res = await fetch(url, init);
+  const res = await fetch(url, { ...init, signal: AbortSignal.timeout(10_000) }).catch((e) => {
+    throw new Error(`${new URL(url).host} did not respond (${e?.name === 'TimeoutError' ? 'timed out' : e})`);
+  });
   if (res.status === 429 && retries > 0) {
     await sleep(1200);
     return getJson(url, init, retries - 1);

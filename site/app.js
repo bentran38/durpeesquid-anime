@@ -1,6 +1,6 @@
 // Anime tracker: search Jikan/TMDB (through the media-search Edge Function), keep a personal
 // library in public.tracker_entries, and total up time watched.
-import { supabase, requireLogin, hasAccess, signOut, HOME } from 'https://durpeesquid.com/auth.js';
+import { supabase, requireLogin, hasAccess, signOut, HOME } from 'https://www.durpeesquid.com/auth.js';
 
 const SLUG = 'anime';
 const STATUSES = [

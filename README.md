@@ -3,7 +3,7 @@
 Personal anime and movie tracker for DurpeeSquid, served at `anime.durpeesquid.com`.
 Static site (no framework), same Supabase project and shared login as
 [durpeesquid](https://github.com/bentran38/durpeesquid): `site/app.js` imports
-`https://durpeesquid.com/auth.js`, so the cookie session carries over.
+`https://www.durpeesquid.com/auth.js`, so the cookie session carries over.
 
 - Metadata: [Jikan](https://jikan.moe) (MyAnimeList data, no key) for anime, [TMDB](https://www.themoviedb.org) for movies.
   Both are called from the `media-search` Edge Function, so the TMDB token stays server-side.

@@ -8,6 +8,9 @@ Static site (no framework), same Supabase project and shared login as
 - Metadata: [AniList](https://anilist.co) (GraphQL, no key), called from the `media-search` Edge Function.
 - Stored per title: title, directors, studios, release date, episode count + minutes per episode (or movie runtime),
   status, episodes watched, rewatch count, started and finished dates, rating (0.5 to 10 in half steps), notes.
+- Import: on MyAnimeList use Profile > List Settings > Export My List, then pick the file under "Import from MyAnimeList".
+  Titles are matched on AniList by MAL id (`media-search` action `bulk`); status, progress, score, dates, rewatches and
+  comments carry over, and titles already in the library are skipped.
 - Time watched = first pass (all of it if completed, else episodes watched) + rewatches x one full watch-through.
 
 ## One-time setup

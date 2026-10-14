@@ -1,6 +1,7 @@
 // Anime tracker: search AniList (through the media-search Edge Function), keep a personal
 // library in anime.tracker_entries, and total up time watched.
 import { supabase, requireLogin, hasAccess, signOut, HOME } from 'https://www.durpeesquid.com/auth.js';
+import { readExportText, parseMalExport, buildRow } from './mal-import.js';
 
 const SLUG = 'anime';
 const db = supabase.schema('anime'); // this project's tables live in the `anime` schema
@@ -435,6 +436,85 @@ function labeled(text, control) {
   return el('label', {}, text, control);
 }
 
+// ---- MyAnimeList import ---------------------------------------------------------------------
+
+// Reads a MAL export, matches every title on AniList by its MAL id, then saves the new ones.
+// Titles already in the library are left alone; titles AniList does not know are listed at the end.
+async function runImport(file) {
+  const msg = $('import-msg');
+  const report = $('import-report');
+  const button = $('import-btn');
+  report.hidden = true;
+  report.replaceChildren();
+  button.disabled = true;
+  try {
+    msg.textContent = 'Reading file…';
+    const items = parseMalExport(await readExportText(file));
+
+    const have = new Set(entries.map((e) => `${e.source}:${e.source_id}`));
+    const rows = [];
+    const notFound = [];
+    let alreadyHave = 0;
+    for (let i = 0; i < items.length; i += 20) {
+      const chunk = items.slice(i, i + 20);
+      msg.textContent = `Matching titles… ${Math.min(i + 20, items.length)} / ${items.length}`;
+      const { matches, missing } = await lookup({ action: 'bulk', source: SOURCE, mal_ids: chunk.map((c) => c.malId) });
+      const byId = new Map(chunk.map((c) => [c.malId, c]));
+      for (const { mal_id, entry } of matches) {
+        const key = `${entry.source}:${entry.source_id}`;
+        if (have.has(key)) {
+          alreadyHave++;
+          continue;
+        }
+        have.add(key);
+        rows.push(buildRow(byId.get(mal_id), entry));
+      }
+      for (const id of missing) notFound.push(byId.get(id).title || `MyAnimeList #${id}`);
+    }
+
+    let saved = 0;
+    const failed = [];
+    for (let i = 0; i < rows.length; i += 50) {
+      msg.textContent = `Saving… ${Math.min(i + 50, rows.length)} / ${rows.length}`;
+      const chunk = rows.slice(i, i + 50);
+      const { data, error } = await db.from('tracker_entries').insert(chunk).select();
+      if (!error) {
+        entries.unshift(...data);
+        saved += data.length;
+        continue;
+      }
+      // One bad row should not sink its neighbours: retry the chunk one title at a time.
+      for (const row of chunk) {
+        const one = await db.from('tracker_entries').insert(row).select().single();
+        if (one.error) failed.push(`${row.title} (${one.error.message})`);
+        else {
+          entries.unshift(one.data);
+          saved++;
+        }
+      }
+    }
+    renderAll();
+
+    msg.textContent =
+      `Imported ${saved} of ${items.length} titles.` +
+      (alreadyHave ? ` ${alreadyHave} already in your library.` : '') +
+      (items.length && !rows.length && !notFound.length && !alreadyHave ? ' Nothing to import.' : '');
+    for (const [label, list] of [
+      [`${notFound.length} not found on AniList`, notFound],
+      [`${failed.length} could not be saved`, failed],
+    ]) {
+      if (!list.length) continue;
+      report.append(el('details', {}, el('summary', { textContent: label }), el('ul', {}, ...list.map((t) => el('li', { textContent: t })))));
+      report.hidden = false;
+    }
+  } catch (e) {
+    msg.textContent = `Import failed: ${e.message}`;
+  } finally {
+    button.disabled = false;
+    $('import-file').value = '';
+  }
+}
+
 const SORTS = {
   added: (a, b) => b.created_at.localeCompare(a.created_at),
   rating: (a, b) => (b.rating ?? -1) - (a.rating ?? -1),
@@ -488,6 +568,11 @@ $('search-form').onsubmit = (ev) => {
   runSearch();
 };
 $('search-q').oninput = queueSearch;
+$('import-btn').onclick = () => $('import-file').click();
+$('import-file').onchange = (ev) => {
+  const file = ev.target.files[0];
+  if (file) runImport(file);
+};
 $('search-q').onkeydown = (ev) => {
   if (ev.key === 'Escape') {
     $('search-q').value = '';

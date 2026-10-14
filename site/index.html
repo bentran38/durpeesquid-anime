@@ -31,6 +31,19 @@
         <ul id="results" class="results"></ul>
       </section>
 
+      <section class="panel import">
+        <div class="row">
+          <button type="button" class="ghost" id="import-btn">Import from MyAnimeList</button>
+          <input type="file" id="import-file" accept=".xml,.gz,application/xml,text/xml,application/gzip" hidden />
+          <span class="muted" id="import-msg" role="status"></span>
+        </div>
+        <p class="muted">
+          On MyAnimeList open Profile, then List Settings, then Export My List, and choose the anime list. Pick the
+          downloaded file here (.xml or .xml.gz). Titles already in your library are skipped.
+        </p>
+        <div id="import-report" class="report" hidden></div>
+      </section>
+
       <section class="row filters">
         <select id="filter-status" aria-label="Filter by status">
           <option value="">All statuses</option>

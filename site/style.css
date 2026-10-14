@@ -15,7 +15,7 @@ body {
   color: var(--text);
   font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
-main { max-width: 900px; margin: 0 auto; padding: 48px 16px 64px; }
+main { width: 100%; min-height: 100vh; padding: clamp(16px, 3vw, 48px) clamp(16px, 3vw, 48px) 64px; }
 [hidden] { display: none !important; }
 a { color: var(--accent); }
 h1 { margin: 0; font-size: clamp(1.75rem, 5vw, 2.5rem); letter-spacing: -0.03em; line-height: 1.1; }
@@ -49,7 +49,7 @@ button.danger { background: transparent; color: var(--danger); border-color: var
 
 .panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 24px; }
 .panel .muted { margin: 8px 0 0; }
-.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 420px; overflow-y: auto; }
+.results { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 4px; max-height: 420px; overflow-y: auto; }
 .results:not(:empty) { margin-top: 8px; }
 .results li { display: flex; align-items: center; gap: 12px; padding: 6px 8px; border-radius: 10px; cursor: pointer; }
 .results li:hover { background: var(--tile); }
@@ -59,7 +59,7 @@ button.danger { background: transparent; color: var(--danger); border-color: var
 .results .info small { display: block; color: var(--muted); }
 
 .filters { margin-bottom: 16px; }
-.library { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.library { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap: 16px; align-items: start; }
 .entry { display: flex; gap: 16px; padding: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; }
 .poster { flex: none; width: 84px; height: 120px; border-radius: 8px; background: var(--tile); object-fit: cover; }
 .results .poster { width: 42px; height: 60px; }

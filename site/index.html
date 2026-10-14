@@ -23,8 +23,7 @@
 
       <section class="panel">
         <form id="search-form" class="row">
-          <input id="search-q" type="search" placeholder="Search anime to add" autocomplete="off" required minlength="2" />
-          <button type="submit">Search</button>
+          <input id="search-q" type="search" placeholder="Search anime to add" autocomplete="off" />
         </form>
         <p id="search-msg" class="muted" role="status"></p>
         <ul id="results" class="results"></ul>
@@ -56,6 +55,7 @@
         Anime data from <a href="https://anilist.co">AniList</a>.
       </footer>
     </main>
+    <dialog id="add-dialog" aria-label="Add to library"></dialog>
     <script type="module" src="/app.js"></script>
   </body>
 </html>

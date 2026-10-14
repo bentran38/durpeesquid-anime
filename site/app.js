@@ -68,44 +68,59 @@ async function lookup(payload) {
 
 // ---- search ---------------------------------------------------------------------------------
 
-async function runSearch(ev) {
-  ev.preventDefault();
+const SOURCE = 'anilist';
+let searchSeq = 0;
+let searchTimer;
+let shown = [];
+
+function setResults(results) {
+  shown = results;
+  $('results').replaceChildren(...results.map(resultRow));
+}
+
+// Runs on every pause in typing; a newer search makes any older response a no-op.
+async function runSearch() {
+  clearTimeout(searchTimer);
+  const q = $('search-q').value.trim();
   const msg = $('search-msg');
-  const list = $('results');
-  list.replaceChildren();
+  const seq = ++searchSeq;
+  if (q.length < 2) {
+    shown = [];
+    $('results').replaceChildren();
+    msg.textContent = '';
+    return;
+  }
   msg.textContent = 'Searching…';
   try {
-    const { results } = await lookup({ action: 'search', source: 'anilist', q: $('search-q').value });
+    const { results } = await lookup({ action: 'search', source: SOURCE, q });
+    if (seq !== searchSeq) return;
     msg.textContent = results.length ? '' : 'No results.';
-    for (const r of results) list.append(resultRow(r));
+    setResults(results);
   } catch (e) {
+    if (seq !== searchSeq) return;
+    $('results').replaceChildren();
     msg.textContent = `Search failed: ${e.message}`;
   }
+}
+
+function queueSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(runSearch, 350);
 }
 
 function resultRow(r) {
   const have = entries.some((e) => e.source === r.source && e.source_id === r.source_id);
   const sub = [r.type, r.year, r.episodes ? `${r.episodes} eps` : null].filter(Boolean).join(' · ');
   const btn = el('button', { type: 'button', textContent: have ? 'In library' : 'Add', disabled: have });
-  btn.onclick = async () => {
-    btn.disabled = true;
-    btn.textContent = 'Adding…';
-    try {
-      await addEntry(r);
-      btn.textContent = 'Added';
-    } catch (e) {
-      btn.disabled = false;
-      btn.textContent = 'Add';
-      $('search-msg').textContent = `Could not add: ${e.message}`;
-    }
-  };
-  return el(
+  const li = el(
     'li',
-    {},
+    { className: have ? 'have' : '' },
     poster(r.poster_url, r.title, 'poster'),
     el('div', { className: 'info' }, el('span', { textContent: r.title }), el('small', { textContent: sub })),
     btn,
   );
+  if (!have) li.onclick = () => openAddDialog(r);
+  return li;
 }
 
 function poster(url, alt, className) {
@@ -116,12 +131,123 @@ function poster(url, alt, className) {
   return img;
 }
 
-async function addEntry(r) {
-  const { entry } = await lookup({ action: 'details', source: r.source, id: r.source_id });
+// ---- add dialog -----------------------------------------------------------------------------
+
+function ratingSelect(value) {
+  const select = el('select');
+  select.append(new Option('Unrated', ''));
+  for (let r = 10; r >= 0.5; r -= 0.5) select.append(new Option(r.toFixed(1), String(r), false, value === r));
+  if (value == null) select.value = '';
+  return select;
+}
+
+// Shows the chosen title and asks for status, progress, rating and notes before saving.
+// The full details (episode count, studios, ...) load in the background.
+function openAddDialog(r) {
+  const dlg = $('add-dialog');
+  let details = null;
+
+  const msg = el('p', { className: 'muted', textContent: 'Loading details…', role: 'status' });
+  const status = el('select');
+  for (const [v, label] of STATUSES) status.append(new Option(label, v, false, v === 'planned'));
+  const rating = ratingSelect(null);
+  const watched = el('input', { type: 'number', min: 0, value: 0 });
+  const watchedLabel = labeled('Episodes watched', watched);
+  watchedLabel.hidden = true;
+  const rewatches = el('input', { type: 'number', min: 0, value: 0 });
+  const notes = el('textarea', { placeholder: 'Notes', ariaLabel: `Notes for ${r.title}` });
+  const save = el('button', { type: 'submit', textContent: 'Add to library', disabled: true });
+  const cancel = el('button', { type: 'button', className: 'ghost', textContent: 'Cancel', onclick: () => dlg.close() });
+
+  // Planned means nothing watched yet; completed means everything (when the total is known).
+  const syncEpisodes = () => {
+    if (!details || details.kind !== 'series') return;
+    const total = details.episodes;
+    if (status.value === 'planned') watched.value = 0;
+    else if (status.value === 'completed' && total != null) watched.value = total;
+    watched.disabled = status.value === 'planned' || (status.value === 'completed' && total != null);
+  };
+  status.onchange = syncEpisodes;
+
+  const sub = [r.type, r.year, r.episodes ? `${r.episodes} eps` : null].filter(Boolean).join(' · ');
+  const form = el(
+    'form',
+    { className: 'add-form' },
+    el(
+      'div',
+      { className: 'add-head' },
+      poster(r.poster_url, r.title, 'poster'),
+      el('div', {}, el('h2', { textContent: r.title }), el('p', { className: 'muted', textContent: sub })),
+    ),
+    el(
+      'div',
+      { className: 'controls' },
+      labeled('Status', status),
+      watchedLabel,
+      labeled('Rating /10', rating),
+      labeled('Rewatches', rewatches),
+    ),
+    notes,
+    msg,
+    el('div', { className: 'foot' }, cancel, save),
+  );
+
+  form.onsubmit = async (ev) => {
+    ev.preventDefault();
+    if (!details) return;
+    save.disabled = true;
+    msg.textContent = 'Saving…';
+    let n = 0;
+    if (details.kind === 'series') {
+      n = Math.max(0, Math.floor(Number(watched.value) || 0));
+      if (details.episodes != null) n = Math.min(n, details.episodes);
+    }
+    try {
+      await addEntry({
+        ...details,
+        status: status.value,
+        episodes_watched: n,
+        rewatch_count: Math.max(0, Math.floor(Number(rewatches.value) || 0)),
+        rating: rating.value === '' ? null : Number(rating.value),
+        notes: notes.value,
+      });
+      dlg.close();
+    } catch (e) {
+      msg.textContent = `Could not add: ${e.message}`;
+      save.disabled = false;
+    }
+  };
+
+  lookup({ action: 'details', source: r.source, id: r.source_id })
+    .then(({ entry: d }) => {
+      details = d;
+      if (d.kind === 'series') {
+        if (d.episodes != null) watched.max = d.episodes;
+        watchedLabel.firstChild.textContent = `Episodes watched${d.episodes != null ? ` / ${d.episodes}` : ''}`;
+        watchedLabel.hidden = false;
+      }
+      syncEpisodes();
+      msg.textContent = '';
+      save.disabled = false;
+    })
+    .catch((e) => {
+      msg.textContent = `Could not load details: ${e.message}`;
+    });
+
+  dlg.replaceChildren(form);
+  dlg.onclick = (ev) => {
+    if (ev.target === dlg) dlg.close(); // click on the backdrop
+  };
+  dlg.showModal();
+  status.focus();
+}
+
+async function addEntry(entry) {
   const { data, error } = await db.from('tracker_entries').insert(entry).select().single();
   if (error) throw new Error(error.code === '23505' ? 'already in your library' : error.message);
   entries.unshift(data);
   renderAll();
+  setResults(shown); // refresh "Add" -> "In library" on the open results
 }
 
 // ---- library --------------------------------------------------------------------------------
@@ -153,10 +279,7 @@ function entryCard(e) {
     renderLibrary();
   };
 
-  const rating = el('select');
-  rating.append(new Option('Unrated', ''));
-  for (let r = 10; r >= 0.5; r -= 0.5) rating.append(new Option(r.toFixed(1), String(r), false, e.rating === r));
-  if (e.rating == null) rating.value = '';
+  const rating = ratingSelect(e.rating);
   rating.onchange = async () => {
     await patch(e, { rating: rating.value === '' ? null : Number(rating.value) }, saved);
     if ($('sort').value === 'rating') renderLibrary();
@@ -309,7 +432,17 @@ if (!(await hasAccess(SLUG))) {
 $('app').hidden = false;
 $('signout').onclick = signOut;
 $('home-link').href = HOME;
-$('search-form').onsubmit = runSearch;
+$('search-form').onsubmit = (ev) => {
+  ev.preventDefault();
+  runSearch();
+};
+$('search-q').oninput = queueSearch;
+$('search-q').onkeydown = (ev) => {
+  if (ev.key === 'Escape') {
+    $('search-q').value = '';
+    runSearch();
+  }
+};
 for (const id of ['filter-status', 'sort']) $(id).onchange = renderLibrary;
 $('filter-text').oninput = renderLibrary;
 

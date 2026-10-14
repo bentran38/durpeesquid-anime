@@ -22,6 +22,7 @@ const el = (tag, props = {}, ...kids) => {
 };
 
 let entries = [];
+const openIds = new Set(); // entries whose advanced section is open; survives re-renders
 
 // ---- calculations ---------------------------------------------------------------------------
 
@@ -294,6 +295,21 @@ async function patch(entry, changes, savedEl) {
 
 function entryCard(e) {
   const saved = el('span', { className: 'saved' });
+  const li = el('li', { className: 'entry' });
+  li.dataset.id = e.id;
+  const pill = el('span', { className: 'pill' });
+  const progress = el('p', { className: 'progress' });
+  // The always-visible part of the card; colour and label follow the status.
+  const refreshSummary = () => {
+    li.dataset.status = e.status;
+    pill.textContent = STATUS_LABEL[e.status];
+    progress.textContent = [
+      e.kind === 'series' && `${e.episodes_watched}${e.episodes != null ? ` / ${e.episodes}` : ''} eps watched`,
+      e.rating != null && `★ ${Number(e.rating).toFixed(1)}`,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  };
   const timeEl = el('p', { className: 'time' });
   const refreshTime = () => {
     const per = fullMinutes(e);
@@ -314,6 +330,7 @@ function entryCard(e) {
   const rating = ratingSelect(e.rating);
   rating.onchange = async () => {
     await patch(e, { rating: rating.value === '' ? null : Number(rating.value) }, saved);
+    refreshSummary();
     if ($('sort').value === 'rating') renderLibrary();
   };
 
@@ -351,6 +368,7 @@ function entryCard(e) {
       if (e.episodes != null) n = Math.min(n, e.episodes);
       watched.value = n;
       await patch(e, { episodes_watched: n }, saved);
+      refreshSummary();
       refreshTime();
     };
     controls.append(labeled(`Episodes watched${e.episodes != null ? ` / ${e.episodes}` : ''}`, watched));
@@ -404,8 +422,10 @@ function entryCard(e) {
       : [e.episodes != null ? `${e.episodes} eps` : 'ongoing', e.episode_minutes && `${e.episode_minutes} min each`]
           .filter(Boolean)
           .join(' × ');
-  const meta = [
-    e.kind === 'movie' ? 'Movie' : 'Series',
+  const kindLabel = e.kind === 'movie' ? 'Movie' : 'Series';
+  const shortMeta = [kindLabel, e.release_date?.slice(0, 4), size].filter(Boolean).join(' · ');
+  const fullMeta = [
+    kindLabel,
     e.release_date,
     size,
     e.studios.length && `Studio: ${e.studios.join(', ')}`,
@@ -414,22 +434,37 @@ function entryCard(e) {
     .filter(Boolean)
     .join(' · ');
 
+  const advanced = el(
+    'details',
+    { className: 'advanced' },
+    el('summary', { textContent: 'Advanced details' }),
+    el('p', { className: 'meta', textContent: fullMeta }),
+    controls,
+    timeEl,
+    notes,
+    el('div', { className: 'foot' }, saved, remove),
+  );
+  advanced.open = openIds.has(e.id);
+  advanced.ontoggle = () => {
+    if (advanced.open) openIds.add(e.id);
+    else openIds.delete(e.id);
+    syncToggleAll();
+  };
+
+  refreshSummary();
   refreshTime();
-  return el(
-    'li',
-    { className: 'entry' },
+  li.append(
     poster(e.poster_url, e.title, 'poster'),
     el(
       'div',
       { className: 'main' },
-      el('h2', { textContent: e.title }),
-      el('p', { className: 'meta', textContent: meta }),
-      controls,
-      timeEl,
-      notes,
-      el('div', { className: 'foot' }, saved, remove),
+      el('div', { className: 'head' }, el('h2', { textContent: e.title }), pill),
+      el('p', { className: 'meta', textContent: shortMeta }),
+      progress,
+      advanced,
     ),
   );
+  return li;
 }
 
 function labeled(text, control) {
@@ -532,6 +567,36 @@ function renderLibrary() {
     .sort(SORTS[$('sort').value]);
   $('library').replaceChildren(...shown.map(entryCard));
   $('empty').hidden = entries.length > 0;
+  syncToggleAll();
+}
+
+// "Expand all" / "Collapse all" follows whether every visible card is open.
+function syncToggleAll() {
+  const cards = [...document.querySelectorAll('#library .advanced')];
+  $('toggle-all').textContent = cards.length && cards.every((d) => d.open) ? 'Collapse all' : 'Expand all';
+  $('toggle-all').disabled = !cards.length;
+}
+
+function toggleAll() {
+  const cards = [...document.querySelectorAll('#library .entry')];
+  const open = !cards.every((c) => c.querySelector('.advanced').open);
+  for (const c of cards) {
+    c.querySelector('.advanced').open = open;
+    if (open) openIds.add(c.dataset.id);
+    else openIds.delete(c.dataset.id);
+  }
+  syncToggleAll();
+}
+
+function setLayout(layout) {
+  $('library').dataset.layout = layout;
+  $('layout-list').setAttribute('aria-pressed', String(layout === 'list'));
+  $('layout-grid').setAttribute('aria-pressed', String(layout === 'grid'));
+  try {
+    localStorage.setItem('anime-layout', layout);
+  } catch {
+    // storage unavailable (private window): the choice just won't be remembered
+  }
 }
 
 function renderStats() {
@@ -581,6 +646,18 @@ $('search-q').onkeydown = (ev) => {
 };
 for (const id of ['filter-status', 'sort']) $(id).onchange = renderLibrary;
 $('filter-text').oninput = renderLibrary;
+$('toggle-all').onclick = toggleAll;
+$('layout-list').onclick = () => setLayout('list');
+$('layout-grid').onclick = () => setLayout('grid');
+{
+  let saved = null;
+  try {
+    saved = localStorage.getItem('anime-layout');
+  } catch {
+    // ignore
+  }
+  setLayout(saved === 'grid' ? 'grid' : 'list');
+}
 
 const { data, error } = await db.from('tracker_entries').select('*');
 if (error) $('empty').textContent = `Could not load your library: ${error.message}`;

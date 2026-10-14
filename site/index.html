@@ -62,7 +62,20 @@
           <option value="finished">Recently finished</option>
         </select>
         <input id="filter-text" type="search" placeholder="Filter library" />
+        <button type="button" class="ghost" id="toggle-all">Expand all</button>
+        <div class="seg" role="group" aria-label="Layout">
+          <button type="button" class="ghost" id="layout-list" aria-pressed="true">List</button>
+          <button type="button" class="ghost" id="layout-grid" aria-pressed="false">Grid</button>
+        </div>
       </section>
+
+      <ul class="legend" aria-label="Status colours">
+        <li data-status="watching">Watching</li>
+        <li data-status="completed">Completed</li>
+        <li data-status="planned">Planned</li>
+        <li data-status="on_hold">On hold</li>
+        <li data-status="dropped">Dropped</li>
+      </ul>
 
       <ul id="library" class="library"></ul>
       <p id="empty" class="muted" hidden>Nothing here yet. Search above to add your first title.</p>

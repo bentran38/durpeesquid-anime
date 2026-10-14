@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Personal anime and movie tracker" />
+    <meta name="theme-color" content="#0a0a0b" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/style.css" />
+    <title>Anime Tracker</title>
+  </head>
+  <body>
+    <main id="app" hidden>
+      <header class="top">
+        <h1>Anime Tracker</h1>
+        <div class="actions">
+          <a class="ghost-link" id="home-link" href="https://durpeesquid.com">DurpeeSquid</a>
+          <button type="button" class="ghost" id="signout">Sign out</button>
+        </div>
+      </header>
+
+      <section class="stats" id="stats" aria-label="Totals"></section>
+
+      <section class="panel">
+        <form id="search-form" class="row">
+          <select id="search-source" aria-label="Source">
+            <option value="jikan">Anime</option>
+            <option value="tmdb">Movie</option>
+          </select>
+          <input id="search-q" type="search" placeholder="Search to add a title" autocomplete="off" required minlength="2" />
+          <button type="submit">Search</button>
+        </form>
+        <p id="search-msg" class="muted" role="status"></p>
+        <ul id="results" class="results"></ul>
+      </section>
+
+      <section class="row filters">
+        <select id="filter-status" aria-label="Filter by status">
+          <option value="">All statuses</option>
+          <option value="watching">Watching</option>
+          <option value="completed">Completed</option>
+          <option value="planned">Planned</option>
+          <option value="on_hold">On hold</option>
+          <option value="dropped">Dropped</option>
+        </select>
+        <select id="sort" aria-label="Sort">
+          <option value="added">Recently added</option>
+          <option value="rating">Rating</option>
+          <option value="title">Title</option>
+          <option value="release">Release date</option>
+          <option value="time">Time watched</option>
+        </select>
+        <input id="filter-text" type="search" placeholder="Filter library" />
+      </section>
+
+      <ul id="library" class="library"></ul>
+      <p id="empty" class="muted" hidden>Nothing here yet. Search above to add your first title.</p>
+
+      <footer class="muted">
+        Anime data from <a href="https://jikan.moe">Jikan</a> (MyAnimeList). Movie data and images from
+        <a href="https://www.themoviedb.org">TMDB</a>; this product uses the TMDB API but is not endorsed or
+        certified by TMDB.
+      </footer>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

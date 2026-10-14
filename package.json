@@ -1,0 +1,10 @@
+{
+  "name": "durpeesquid-anime",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/gen-config.js",
+    "dev": "node scripts/gen-config.js && npx --yes serve site -l 8001"
+  }
+}

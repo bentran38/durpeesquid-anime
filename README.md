@@ -11,9 +11,10 @@ Static site (no framework), same Supabase project and shared login as
 - Import: on MyAnimeList use Profile > List Settings > Export My List, then pick the file under "Import from MyAnimeList".
   Titles are matched on AniList by MAL id (`media-search` action `bulk`); status, progress, score, dates, rewatches and
   comments carry over, and titles already in the library are skipped.
-- Top lists: `/lists` builds a Top 10 or a 3x3 from the library and saves it to `anime.shared_lists` as a snapshot of the
-  picks. Every signed-in anime user can open any list (RLS: `project_access` for `anime`); only the owner can edit or delete.
-  Migration: `supabase/migrations/20261014010000_shared_lists.sql`.
+- Lists and pages: each person has at most one Top 10 and one 3x3 (`/lists`, table `anime.shared_lists`), each private
+  or public, and can make their whole library public. Public content shows on their page, `/u/<handle>` (the handle is
+  set in the dashboard's settings). Other people read libraries through the `anime.public_entries` view, which leaves
+  out notes. Migrations: `20261014010000_shared_lists.sql`, `20261015010000_public_pages.sql`.
 - Time watched = first pass (all of it if completed, else episodes watched) + rewatches x one full watch-through.
 
 ## One-time setup

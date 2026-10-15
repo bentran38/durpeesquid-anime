@@ -1,5 +1,6 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "site",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [{ "source": "/u/:handle", "destination": "/profile.html" }]
 }

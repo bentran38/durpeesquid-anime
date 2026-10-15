@@ -1,18 +1,11 @@
 // Anime tracker: search AniList (through the media-search Edge Function), keep a personal
 // library in anime.tracker_entries, and total up time watched.
-import { supabase, requireLogin, hasAccess, signOut, HOME } from 'https://www.durpeesquid.com/auth.js';
+import { supabase, requireLogin, hasAccess, signOut, HOME, loadProfile } from './session.js';
+import { STATUSES, STATUS_LABEL, fullMinutes, minutesWatched, fmtDuration } from './stats.js';
 import { readExportText, parseMalExport, buildRow } from './mal-import.js';
 
 const SLUG = 'anime';
 const db = supabase.schema('anime'); // this project's tables live in the `anime` schema
-const STATUSES = [
-  ['planned', 'Planned'],
-  ['watching', 'Watching'],
-  ['completed', 'Completed'],
-  ['on_hold', 'On hold'],
-  ['dropped', 'Dropped'],
-];
-const STATUS_LABEL = Object.fromEntries(STATUSES);
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, props = {}, ...kids) => {
@@ -23,33 +16,6 @@ const el = (tag, props = {}, ...kids) => {
 
 let entries = [];
 const openIds = new Set(); // entries whose advanced section is open; survives re-renders
-
-// ---- calculations ---------------------------------------------------------------------------
-
-// Minutes for one full watch-through.
-function fullMinutes(e) {
-  if (e.kind === 'movie') return e.runtime_minutes ?? 0;
-  return (e.episodes ?? e.episodes_watched) * (e.episode_minutes ?? 0);
-}
-
-// Minutes actually spent: the first pass (partial unless completed) plus every rewatch.
-function minutesWatched(e) {
-  if (e.status === 'planned') return 0;
-  const full = fullMinutes(e);
-  let first;
-  if (e.status === 'completed') first = full;
-  else if (e.kind === 'movie') first = 0;
-  else first = Math.min(e.episodes_watched, e.episodes ?? Infinity) * (e.episode_minutes ?? 0);
-  return first + e.rewatch_count * full;
-}
-
-function fmtDuration(min) {
-  if (!min) return '0m';
-  const d = Math.floor(min / 1440);
-  const h = Math.floor((min % 1440) / 60);
-  const m = min % 60;
-  return [d && `${d}d`, h && `${h}h`, m && `${m}m`].filter(Boolean).join(' ');
-}
 
 // ---- Edge Function --------------------------------------------------------------------------
 
@@ -654,9 +620,23 @@ $('signout').onclick = signOut;
   const user = session.user;
   const meta = user.user_metadata ?? {};
   const local = (user.email ?? '').split('@')[0];
-  const name = meta.full_name || meta.name || (local ? local.charAt(0).toUpperCase() + local.slice(1) : '');
+  let name = meta.full_name || meta.name || (local ? local.charAt(0).toUpperCase() + local.slice(1) : '');
+  const greet = () => ($('welcome').textContent = name ? `Welcome back, ${name}.` : 'Welcome back.');
   $('handle').textContent = local ? `@${local}` : '';
-  $('welcome').textContent = name ? `Welcome back, ${name}.` : 'Welcome back.';
+  greet();
+  // the saved name and handle replace the guesses above
+  loadProfile(user.id).then((profile) => {
+    if (!profile) return;
+    if (profile.display_name) {
+      name = profile.display_name;
+      greet();
+    }
+    if (profile.handle) {
+      $('handle').textContent = `@${profile.handle}`;
+      $('page-link').href = `/u/${profile.handle}`;
+      $('page-link').hidden = false;
+    }
+  });
 }
 $('home-link').href = HOME;
 $('search-form').onsubmit = (ev) => {
@@ -700,6 +680,36 @@ $('layout-grid').onclick = () => setLayout('grid');
   }
   setLayout(saved === 'grid' ? 'grid' : 'list');
 }
+
+// ---- library visibility: private (only me) or public (shown on my page) ---------------------
+
+let libraryPublic = false;
+let toastTimer;
+function toast(text, isError = false) {
+  const t = $('toast');
+  t.textContent = text;
+  t.classList.toggle('error', isError);
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), isError ? 5000 : 2400);
+}
+function renderVisibility() {
+  $('library-vis').setAttribute('aria-pressed', String(libraryPublic));
+  $('library-vis-label').textContent = libraryPublic ? 'Library public' : 'Library private';
+}
+{
+  const { data: settings } = await db.from('profile_settings').select('library_public').eq('user_id', session.user.id).maybeSingle();
+  libraryPublic = Boolean(settings?.library_public);
+  renderVisibility();
+}
+$('library-vis').onclick = async () => {
+  const next = !libraryPublic;
+  const { error } = await db.from('profile_settings').upsert({ user_id: session.user.id, library_public: next }, { onConflict: 'user_id' });
+  if (error) return toast(`Could not change visibility: ${error.message}`, true);
+  libraryPublic = next;
+  renderVisibility();
+  toast(next ? 'Your library is now public' : 'Your library is now private');
+};
 
 const { data, error } = await db.from('tracker_entries').select('*');
 if (error) $('empty').textContent = `Could not load your library: ${error.message}`;

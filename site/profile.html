@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0a0b" />
+    <script src="https://www.durpeesquid.com/theme.js"></script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="https://www.durpeesquid.com/themes.css" />
+    <link rel="stylesheet" href="/style.css" />
+    <title>Profile</title>
+  </head>
+  <body>
+    <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+    <main id="app" hidden>
+      <header class="topbar">
+        <div class="brand">
+          <a class="badge" id="home-link" href="https://durpeesquid.com" aria-label="Back to DurpeeSquid">DS</a>
+          <span class="wordmark">Anime Tracker</span>
+          <span class="sep" aria-hidden="true"></span>
+          <span class="handle" id="handle"></span>
+        </div>
+        <div class="actions">
+          <a class="btn" href="/">
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            Tracker
+          </a>
+          <a class="btn" href="/lists">
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            My lists
+          </a>
+          <button type="button" class="btn" id="signout">
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+            Sign out
+          </button>
+        </div>
+      </header>
+
+      <section class="panel" id="not-found" hidden>
+        <h2>Profile not found</h2>
+        <p><a class="btn" href="/lists">Back to lists</a></p>
+      </section>
+
+      <div id="content" hidden>
+        <section class="hero">
+          <div class="who">
+            <span class="avatar big" id="avatar"></span>
+            <div>
+              <p class="eyebrow"><span class="dot"></span><span id="eyebrow"></span></p>
+              <h1 id="profile-name"></h1>
+            </div>
+          </div>
+          <div class="statpanel" id="stats" hidden></div>
+        </section>
+
+        <section class="block" id="sec-top10" hidden>
+          <div class="block-head"><h2>Top 10</h2><span class="tag" id="tag-top10"></span></div>
+          <div id="list-top10"></div>
+        </section>
+
+        <section class="block" id="sec-grid3" hidden>
+          <div class="block-head"><h2>3x3</h2><span class="tag" id="tag-grid3"></span></div>
+          <div id="list-grid3"></div>
+        </section>
+
+        <section class="block" id="sec-library" hidden>
+          <div class="block-head"><h2>Library</h2><span class="tag" id="tag-library"></span></div>
+          <div class="toolbar">
+            <input type="search" id="wall-search" placeholder="Filter" aria-label="Filter library" />
+            <select id="wall-sort" aria-label="Sort">
+              <option value="rating">Rating</option>
+              <option value="recent">Recently added</option>
+              <option value="title">Title</option>
+            </select>
+            <div class="chips" id="wall-chips" role="group" aria-label="Status"></div>
+          </div>
+          <ul class="wall" id="wall"></ul>
+        </section>
+
+        <p class="muted" id="nothing" hidden>Nothing public yet.</p>
+      </div>
+    </main>
+    <script type="module" src="/profile.js"></script>
+  </body>
+</html>

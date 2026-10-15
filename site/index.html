@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Personal anime tracker" />
     <meta name="theme-color" content="#0a0a0b" />
+    <script src="https://www.durpeesquid.com/theme.js"></script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="https://www.durpeesquid.com/themes.css" />
     <link rel="stylesheet" href="/style.css" />
     <title>Anime Tracker</title>
   </head>
   <body>
+    <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
     <main id="app" hidden>
       <header class="topbar">
         <div class="brand">
@@ -19,7 +22,11 @@
           <span class="handle" id="handle"></span>
         </div>
         <div class="actions">
-          <a class="btn" href="/lists"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> Top lists</a>
+          <a class="btn" href="/lists"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> My lists</a>
+          <a class="btn" id="page-link" href="#" hidden>
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+            My page
+          </a>
           <button type="button" class="btn" id="signout"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg> Sign out</button>
         </div>
       </header>
@@ -73,6 +80,10 @@
           <button type="button" class="ghost" id="layout-list" aria-pressed="true"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg> List</button>
           <button type="button" class="ghost" id="layout-grid" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Grid</button>
         </div>
+        <button type="button" class="btn" id="library-vis" aria-pressed="false">
+          <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+          <span id="library-vis-label">Library private</span>
+        </button>
       </section>
 
       <ul class="legend" aria-label="Status colours">
@@ -89,6 +100,7 @@
       <footer class="foot">Data · <a href="https://anilist.co">AniList</a></footer>
     </main>
     <dialog id="add-dialog" aria-label="Add to library"></dialog>
+    <div class="toast" id="toast" role="status"></div>
     <script type="module" src="/app.js"></script>
   </body>
 </html>

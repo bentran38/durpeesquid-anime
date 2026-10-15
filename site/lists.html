@@ -3,24 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Build and share a Top 10 or 3x3 of your favourite anime" />
+    <meta name="description" content="Build your Top 10 and 3x3" />
     <meta name="theme-color" content="#0a0a0b" />
+    <script src="https://www.durpeesquid.com/theme.js"></script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="https://www.durpeesquid.com/themes.css" />
     <link rel="stylesheet" href="/style.css" />
-    <title>Top Lists</title>
+    <title>My Lists</title>
   </head>
   <body>
+    <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
     <main id="app" hidden>
       <header class="topbar">
         <div class="brand">
           <a class="badge" id="home-link" href="https://durpeesquid.com" aria-label="Back to DurpeeSquid">DS</a>
-          <span class="wordmark">Top Lists</span>
+          <span class="wordmark">My Lists</span>
           <span class="sep" aria-hidden="true"></span>
           <span class="handle" id="handle"></span>
         </div>
         <div class="actions">
-          <a class="btn" href="/"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></svg> Tracker</a>
-          <button type="button" class="btn" id="signout"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg> Sign out</button>
+          <a class="btn" href="/">
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            Tracker
+          </a>
+          <a class="btn" id="page-link" href="#" hidden>
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+            My page
+          </a>
+          <button type="button" class="btn" id="signout">
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+            Sign out
+          </button>
         </div>
       </header>
 
@@ -31,59 +44,56 @@
         </div>
       </section>
 
-      <!-- Read-only view of one shared list (opened from a link) -->
-      <section class="panel" id="view" hidden></section>
-
-      <div id="workspace">
-        <section class="panel" id="editor">
-          <h2 id="editor-title">Create a list</h2>
-          <div class="editor-head">
-            <div class="seg" role="group" aria-label="List type">
-              <button type="button" class="ghost" id="kind-top10" aria-pressed="true">Top 10</button>
-              <button type="button" class="ghost" id="kind-grid3" aria-pressed="false">3x3</button>
-            </div>
-            <input id="list-title" type="text" maxlength="80" placeholder="List title" aria-label="List title" />
-            <input id="author-name" type="text" maxlength="40" placeholder="Your name" aria-label="Your name" />
+      <section class="panel" id="editor">
+        <div class="editor-head">
+          <div class="seg" role="group" aria-label="List type">
+            <button type="button" class="ghost" id="kind-top10" aria-pressed="true">Top 10</button>
+            <button type="button" class="ghost" id="kind-grid3" aria-pressed="false">3x3</button>
           </div>
-
-          <div class="editor-grid">
-            <div class="col">
-              <h3>Your picks <span id="count"></span></h3>
-              <div id="preview"></div>
-            </div>
-            <div class="col">
-              <h3>Add from your library</h3>
-              <input id="pick-filter" type="search" placeholder="Filter your library" aria-label="Filter your library" />
-              <ul id="picker" class="picker"></ul>
-              <p id="picker-note" class="muted" hidden></p>
-            </div>
+          <input id="list-title" type="text" maxlength="80" placeholder="List title" aria-label="List title" />
+          <div class="seg" role="group" aria-label="Who can see this list">
+            <button type="button" class="ghost" id="vis-private" aria-pressed="true">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Private
+            </button>
+            <button type="button" class="ghost" id="vis-public" aria-pressed="false">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Public
+            </button>
           </div>
+        </div>
 
-          <div class="row save-row">
-            <button type="button" class="btn primary" id="save-list" disabled><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg> Save and get link</button>
-            <button type="button" class="btn" id="reset-list">Start over</button>
-            <span class="muted" id="editor-msg" role="status"></span>
+        <div class="editor-grid">
+          <div class="col">
+            <h3>Your picks <span id="count"></span></h3>
+            <div id="preview"></div>
           </div>
-          <div class="share" id="share-box" hidden>
-            <input id="share-link" type="text" readonly aria-label="Share link" />
-            <button type="button" class="btn" id="copy-share">Copy link</button>
+          <div class="col">
+            <h3>Add from your library</h3>
+            <input id="pick-filter" type="search" placeholder="Filter your library" aria-label="Filter your library" />
+            <ul id="picker" class="picker"></ul>
+            <p id="picker-note" class="muted" hidden></p>
           </div>
-        </section>
+        </div>
 
-        <section class="panel">
-          <h2>My lists</h2>
-          <ul id="mine" class="lists"></ul>
-          <p id="mine-empty" class="muted" hidden>No lists yet.</p>
-        </section>
+        <div class="row save-row">
+          <button type="button" class="btn primary" id="save-list" disabled>
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+            Save
+          </button>
+          <button type="button" class="btn danger" id="delete-list" hidden>
+            <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/></svg>
+            Delete
+          </button>
+          <span class="muted" id="editor-msg" role="status"></span>
+        </div>
+      </section>
 
-        <section class="panel">
-          <h2>Shared by others</h2>
-          <ul id="others" class="lists"></ul>
-          <p id="others-empty" class="muted" hidden>No shared lists.</p>
-        </section>
-      </div>
-
+      <section class="panel">
+        <h2>People</h2>
+        <ul id="people" class="people"></ul>
+        <p id="people-empty" class="muted" hidden>No public pages yet.</p>
+      </section>
     </main>
+    <div class="toast" id="toast" role="status"></div>
     <script type="module" src="/lists.js"></script>
   </body>
 </html>

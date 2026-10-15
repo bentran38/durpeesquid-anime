@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Build and share a Top 10 or 3x3 of your favourite anime" />
+    <meta name="theme-color" content="#0a0a0b" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/style.css" />
+    <title>Top Lists</title>
+  </head>
+  <body>
+    <main id="app" hidden>
+      <header class="top">
+        <div class="brand">
+          <a class="badge" id="home-link" href="https://durpeesquid.com" aria-label="Back to DurpeeSquid">DS</a>
+          <h1>Top Lists</h1>
+        </div>
+        <div class="actions">
+          <a class="ghost-link" href="/">Tracker</a>
+          <button type="button" class="ghost" id="signout">Sign out</button>
+        </div>
+      </header>
+
+      <!-- Read-only view of one shared list (opened from a link) -->
+      <section class="panel" id="view" hidden></section>
+
+      <div id="workspace">
+        <section class="panel" id="editor">
+          <h2 id="editor-title">Create a list</h2>
+          <div class="editor-head">
+            <div class="seg" role="group" aria-label="List type">
+              <button type="button" class="ghost" id="kind-top10" aria-pressed="true">Top 10</button>
+              <button type="button" class="ghost" id="kind-grid3" aria-pressed="false">3x3</button>
+            </div>
+            <input id="list-title" type="text" maxlength="80" placeholder="List title, e.g. My top 10 of 2025" aria-label="List title" />
+            <input id="author-name" type="text" maxlength="40" placeholder="Your name (shown to others)" aria-label="Your name" />
+          </div>
+
+          <div class="editor-grid">
+            <div class="col">
+              <h3>Your picks <span id="count"></span></h3>
+              <div id="preview"></div>
+            </div>
+            <div class="col">
+              <h3>Add from your library</h3>
+              <input id="pick-filter" type="search" placeholder="Filter your library" aria-label="Filter your library" />
+              <ul id="picker" class="picker"></ul>
+              <p id="picker-note" class="muted" hidden></p>
+            </div>
+          </div>
+
+          <div class="row save-row">
+            <button type="button" id="save-list" disabled>Save and get link</button>
+            <button type="button" class="ghost" id="reset-list">Start over</button>
+            <span class="muted" id="editor-msg" role="status"></span>
+          </div>
+          <div class="share" id="share-box" hidden>
+            <input id="share-link" type="text" readonly aria-label="Share link" />
+            <button type="button" id="copy-share">Copy link</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>My lists</h2>
+          <ul id="mine" class="lists"></ul>
+          <p id="mine-empty" class="muted" hidden>You haven't saved a list yet.</p>
+        </section>
+
+        <section class="panel">
+          <h2>Shared by others</h2>
+          <ul id="others" class="lists"></ul>
+          <p id="others-empty" class="muted" hidden>Nobody else has shared a list yet.</p>
+        </section>
+      </div>
+
+      <footer class="muted">Only signed-in members of the anime tracker can see shared lists.</footer>
+    </main>
+    <script type="module" src="/lists.js"></script>
+  </body>
+</html>

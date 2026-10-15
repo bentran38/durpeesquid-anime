@@ -11,18 +11,26 @@
   </head>
   <body>
     <main id="app" hidden>
-      <header class="top">
+      <header class="topbar">
         <div class="brand">
           <a class="badge" id="home-link" href="https://durpeesquid.com" aria-label="Back to DurpeeSquid">DS</a>
-          <h1>Anime Tracker</h1>
+          <span class="wordmark">Anime Tracker</span>
+          <span class="sep" aria-hidden="true"></span>
+          <span class="handle" id="handle"></span>
         </div>
         <div class="actions">
-          <a class="ghost-link" href="/lists">Top lists</a>
-          <button type="button" class="ghost" id="signout">Sign out</button>
+          <a class="btn" href="/lists"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> Top lists</a>
+          <button type="button" class="btn" id="signout"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg> Sign out</button>
         </div>
       </header>
 
-      <section class="stats" id="stats" aria-label="Totals"></section>
+      <section class="hero">
+        <div>
+          <p class="eyebrow"><span class="dot"></span><span id="count"></span></p>
+          <h1 id="welcome"></h1>
+        </div>
+        <div class="statpanel" id="stats" aria-label="Totals"></div>
+      </section>
 
       <section class="panel">
         <form id="search-form" class="row">
@@ -34,14 +42,10 @@
 
       <section class="panel import">
         <div class="row">
-          <button type="button" class="ghost" id="import-btn">Import from MyAnimeList</button>
+          <button type="button" class="btn" id="import-btn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg> Import from MyAnimeList</button>
           <input type="file" id="import-file" accept=".xml,.gz,application/xml,text/xml,application/gzip" hidden />
           <span class="muted" id="import-msg" role="status"></span>
         </div>
-        <p class="muted">
-          On MyAnimeList open Profile, then List Settings, then Export My List, and choose the anime list. Pick the
-          downloaded file here (.xml or .xml.gz). Titles already in your library are skipped.
-        </p>
         <div id="import-report" class="report" hidden></div>
       </section>
 
@@ -62,12 +66,12 @@
           <option value="time">Time watched</option>
           <option value="finished">Recently finished</option>
         </select>
-        <button type="button" class="ghost" id="sort-dir" aria-label="Reverse sort order"></button>
+        <button type="button" class="btn" id="sort-dir" aria-label="Reverse sort order"></button>
         <input id="filter-text" type="search" placeholder="Filter library" />
-        <button type="button" class="ghost" id="toggle-all">Expand all</button>
+        <button type="button" class="btn" id="toggle-all"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg> <span id="toggle-label">Expand all</span></button>
         <div class="seg" role="group" aria-label="Layout">
-          <button type="button" class="ghost" id="layout-list" aria-pressed="true">List</button>
-          <button type="button" class="ghost" id="layout-grid" aria-pressed="false">Grid</button>
+          <button type="button" class="ghost" id="layout-list" aria-pressed="true"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg> List</button>
+          <button type="button" class="ghost" id="layout-grid" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Grid</button>
         </div>
       </section>
 
@@ -80,11 +84,9 @@
       </ul>
 
       <ul id="library" class="library"></ul>
-      <p id="empty" class="muted" hidden>Nothing here yet. Search above to add your first title.</p>
+      <p id="empty" class="muted" hidden>No titles yet.</p>
 
-      <footer class="muted">
-        Anime data from <a href="https://anilist.co">AniList</a>.
-      </footer>
+      <footer class="foot">Data · <a href="https://anilist.co">AniList</a></footer>
     </main>
     <dialog id="add-dialog" aria-label="Add to library"></dialog>
     <script type="module" src="/app.js"></script>

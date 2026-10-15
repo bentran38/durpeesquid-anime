@@ -65,7 +65,7 @@ function renderList(kind, items, edit) {
     if (!edit) return li;
     li.dataset.index = String(i);
     li.tabIndex = 0;
-    li.title = `${items[i].title} (drag to move)`;
+    li.title = items[i].title;
     li.onkeydown = (ev) => {
       if (!ev.shiftKey || ev.target !== li) return;
       const down = kind === 'grid3' ? 3 : 1;
@@ -232,7 +232,7 @@ function setKind(kind) {
   const { max } = KINDS[kind];
   if (draft.items.length > max) {
     draft.items.length = max;
-    say(`A ${KINDS[kind].label} holds ${max}, so the extra picks were dropped.`);
+    say(`Trimmed to ${max}.`);
   }
   for (const k of Object.keys(KINDS)) $(`kind-${k}`).setAttribute('aria-pressed', String(k === kind));
   renderDraft();
@@ -247,8 +247,7 @@ function renderDraft() {
     list = renderList(kind, items, { reorder, remove });
     makeSortable(list, reorder);
   }
-  $('preview').replaceChildren(list ?? el('p', { className: 'muted', textContent: 'Pick titles from your library to build the list.' }));
-  $('reorder-hint').hidden = items.length < 2;
+  $('preview').replaceChildren(list ?? el('p', { className: 'muted', textContent: 'No picks yet.' }));
   $('save-list').disabled = !items.length;
   renderPicker();
 }
@@ -302,9 +301,9 @@ function renderPicker() {
   note.hidden = matches.length <= PICKER_LIMIT && matches.length > 0;
   note.textContent = !matches.length
     ? library.length
-      ? 'No titles match.'
-      : 'Your library is empty. Add titles in the tracker first.'
-    : `Showing ${PICKER_LIMIT} of ${matches.length}. Filter to narrow it down.`;
+      ? 'No matches.'
+      : 'Library is empty.'
+    : `${PICKER_LIMIT} of ${matches.length}`;
 }
 
 function resetDraft() {
@@ -330,7 +329,7 @@ function editList(list) {
 async function save() {
   const title = $('list-title').value.trim();
   const authorName = $('author-name').value.trim();
-  if (!title) return say('Give your list a title first.');
+  if (!title) return say('Add a title.');
   try {
     localStorage.setItem(AUTHOR_KEY, authorName);
   } catch {
@@ -349,7 +348,7 @@ async function save() {
   $('editor-title').textContent = 'Edit your list';
   $('share-link').value = shareUrl(data.id);
   $('share-box').hidden = false;
-  say('Saved. Anyone signed in to the anime tracker can open this link.');
+  say('Saved.');
   await loadLists();
 }
 
@@ -403,8 +402,9 @@ async function loadLists() {
   $('mine').replaceChildren(...mine.map(listCard));
   $('others').replaceChildren(...others.map(listCard));
   $('mine-empty').hidden = mine.length > 0;
-  $('mine-empty').textContent = "You haven't saved a list yet.";
+  $('mine-empty').textContent = 'No lists yet.';
   $('others-empty').hidden = others.length > 0;
+  $('list-count').textContent = `${lists.length} ${lists.length === 1 ? 'list' : 'lists'}`;
 }
 
 // ---- opening a shared link ------------------------------------------------------------------
@@ -418,7 +418,7 @@ async function showView(id) {
   const { data: list, error } = await db.from('shared_lists').select('*').eq('id', id).maybeSingle();
   if (error || !list) {
     view.replaceChildren(
-      el('p', { textContent: error ? `Could not load this list: ${error.message}` : "This list doesn't exist, or it was deleted." }),
+      el('p', { textContent: error ? `Could not load this list: ${error.message}` : 'List not found.' }),
       el('a', { className: 'btn-link', href: '/lists', textContent: 'All lists' }),
     );
     return;
@@ -464,6 +464,10 @@ me = session.user.id;
 $('app').hidden = false;
 $('signout').onclick = signOut;
 $('home-link').href = HOME;
+{
+  const local = (session.user.email ?? '').split('@')[0];
+  $('handle').textContent = local ? `@${local}` : '';
+}
 $('kind-top10').onclick = () => setKind('top10');
 $('kind-grid3').onclick = () => setKind('grid3');
 $('pick-filter').oninput = renderPicker;

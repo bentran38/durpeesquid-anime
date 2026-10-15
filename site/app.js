@@ -455,7 +455,7 @@ function entryCard(e, position) {
   refreshSummary();
   refreshTime();
   li.append(
-    el('span', { className: 'rank', textContent: String(position), title: `Position ${position}` }),
+    el('span', { className: 'rank', textContent: String(position), }),
     poster(e.poster_url, e.title, 'poster'),
     el(
       'div',
@@ -595,7 +595,7 @@ function renderLibrary() {
 // "Expand all" / "Collapse all" follows whether every visible card is open.
 function syncToggleAll() {
   const cards = [...document.querySelectorAll('#library .advanced')];
-  $('toggle-all').textContent = cards.length && cards.every((d) => d.open) ? 'Collapse all' : 'Expand all';
+  $('toggle-label').textContent = cards.length && cards.every((d) => d.open) ? 'Collapse all' : 'Expand all';
   $('toggle-all').disabled = !cards.length;
 }
 
@@ -623,14 +623,15 @@ function setLayout(layout) {
 
 function renderStats() {
   const rated = entries.filter((e) => e.rating != null);
-  const avg = rated.length ? (rated.reduce((s, e) => s + Number(e.rating), 0) / rated.length).toFixed(2) : '–';
-  const total = entries.reduce((s, e) => s + minutesWatched(e), 0);
-  const cell = (value, label) => el('div', { className: 'stat' }, el('b', { textContent: value }), el('span', { textContent: label }));
+  const avg = rated.length ? (rated.reduce((sum, e) => sum + Number(e.rating), 0) / rated.length).toFixed(2) : '–';
+  const total = entries.reduce((sum, e) => sum + minutesWatched(e), 0);
+  const cell = (label, value) =>
+    el('div', { className: 'stat-cell' }, el('span', { className: 'stat-label', textContent: label }), el('span', { className: 'stat-value', textContent: value }));
+  $('count').textContent = `${entries.length} ${entries.length === 1 ? 'title' : 'titles'}`;
   $('stats').replaceChildren(
-    cell(String(entries.length), 'Titles'),
-    cell(String(entries.filter((e) => e.status === 'completed').length), 'Completed'),
-    cell(fmtDuration(total), `Time watched (${(total / 60).toFixed(0)} h)`),
-    cell(avg, 'Average rating'),
+    cell('Completed', String(entries.filter((e) => e.status === 'completed').length)),
+    cell('Time watched', fmtDuration(total)),
+    cell('Avg rating', avg),
   );
 }
 
@@ -641,7 +642,7 @@ function renderAll() {
 
 // ---- start ----------------------------------------------------------------------------------
 
-await requireLogin();
+const session = await requireLogin();
 if (!(await hasAccess(SLUG))) {
   location.replace(HOME);
   await new Promise(() => {});
@@ -649,6 +650,14 @@ if (!(await hasAccess(SLUG))) {
 
 $('app').hidden = false;
 $('signout').onclick = signOut;
+{
+  const user = session.user;
+  const meta = user.user_metadata ?? {};
+  const local = (user.email ?? '').split('@')[0];
+  const name = meta.full_name || meta.name || (local ? local.charAt(0).toUpperCase() + local.slice(1) : '');
+  $('handle').textContent = local ? `@${local}` : '';
+  $('welcome').textContent = name ? `Welcome back, ${name}.` : 'Welcome back.';
+}
 $('home-link').href = HOME;
 $('search-form').onsubmit = (ev) => {
   ev.preventDefault();

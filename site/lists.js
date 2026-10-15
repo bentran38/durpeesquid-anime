@@ -27,7 +27,7 @@ function blankDraft() {
 // ---- helpers --------------------------------------------------------------------------------
 
 function poster(url, className) {
-  const img = el('img', { className, alt: '', loading: 'lazy' });
+  const img = el('img', { className, alt: '', loading: 'lazy', draggable: false });
   if (typeof url === 'string' && url.startsWith('https://')) img.src = url;
   else img.removeAttribute('src');
   return img;
@@ -58,16 +58,30 @@ async function copyLink(id, button) {
 }
 
 // One renderer for the editor preview, the shared view and (read-only) everywhere else.
-// Pass onMove/onRemove to get the reorder and remove buttons.
-function renderList(kind, items, onMove, onRemove) {
-  const controls = (i, back, forward) =>
-    onMove &&
+// Pass `edit` ({ reorder, remove }) to make the picks draggable and removable.
+function renderList(kind, items, edit) {
+  // Each editable pick carries its position so dragging and the keyboard know where it is.
+  const editable = (li, i) => {
+    if (!edit) return li;
+    li.dataset.index = String(i);
+    li.tabIndex = 0;
+    li.title = `${items[i].title} (drag to move)`;
+    li.onkeydown = (ev) => {
+      if (!ev.shiftKey || ev.target !== li) return;
+      const down = kind === 'grid3' ? 3 : 1;
+      const step = { ArrowUp: -down, ArrowDown: down, ArrowLeft: -1, ArrowRight: 1 }[ev.key];
+      if (!step) return;
+      ev.preventDefault();
+      edit.reorder(i, i + step, true);
+    };
+    return li;
+  };
+  const removeButton = (i) =>
+    edit &&
     el(
       'div',
       { className: 'ctl' },
-      el('button', { type: 'button', className: 'ghost', textContent: back, ariaLabel: 'Move earlier', disabled: i === 0, onclick: () => onMove(i, -1) }),
-      el('button', { type: 'button', className: 'ghost', textContent: forward, ariaLabel: 'Move later', disabled: i === items.length - 1, onclick: () => onMove(i, 1) }),
-      el('button', { type: 'button', className: 'ghost', textContent: '✕', ariaLabel: `Remove ${items[i].title}`, onclick: () => onRemove(i) }),
+      el('button', { type: 'button', className: 'ghost', textContent: '✕', ariaLabel: `Remove ${items[i].title}`, onclick: () => edit.remove(i) }),
     );
 
   if (kind === 'top10') {
@@ -75,23 +89,140 @@ function renderList(kind, items, onMove, onRemove) {
       'ol',
       { className: 'top10', ariaLabel: 'Top 10' },
       ...items.map((it, i) =>
-        el(
-          'li',
-          {},
-          el('span', { className: 'num', textContent: String(i + 1) }),
-          poster(it.poster_url, 'poster'),
-          el('div', { className: 'info' }, el('span', { textContent: it.title }), el('small', { textContent: meta(it) })),
-          controls(i, '▲', '▼'),
+        editable(
+          el(
+            'li',
+            {},
+            el('span', { className: 'num', textContent: String(i + 1) }),
+            poster(it.poster_url, 'poster'),
+            el('div', { className: 'info' }, el('span', { textContent: it.title }), el('small', { textContent: meta(it) })),
+            removeButton(i),
+          ),
+          i,
         ),
       ),
     );
   }
 
   const tiles = items.map((it, i) =>
-    el('li', { className: 'tile', title: it.title }, poster(it.poster_url, 'cover'), el('span', { className: 'cap', textContent: it.title }), controls(i, '◀', '▶')),
+    editable(el('li', { className: 'tile', title: it.title }, poster(it.poster_url, 'cover'), el('span', { className: 'cap', textContent: it.title }), removeButton(i)), i),
   );
   while (tiles.length < KINDS.grid3.max) tiles.push(el('li', { className: 'tile empty' }));
   return el('ol', { className: 'grid3', ariaLabel: '3x3' }, ...tiles);
+}
+
+// ---- drag to reorder ------------------------------------------------------------------------
+
+const HOLD_MS = 220; // touch and pen: press and hold before a drag starts, so the page can still scroll
+const MOVE_PX = 5; // mouse: how far to move before a press becomes a drag
+const SLOP_PX = 10; // touch: moving this far before the hold ends means the user is scrolling
+
+// Makes the picks in `list` draggable. While dragging, a copy follows the pointer and the pick
+// it would land on is outlined; the order only changes on drop.
+function makeSortable(list, reorder) {
+  let press = null;
+  const picks = () => [...list.querySelectorAll('[data-index]')];
+
+  const targetAt = (x, y) => {
+    let nearest = null;
+    let nearestDistance = Infinity;
+    for (const n of picks()) {
+      const r = n.getBoundingClientRect();
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return Number(n.dataset.index);
+      const d = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
+      if (d < nearestDistance) {
+        nearestDistance = d;
+        nearest = n;
+      }
+    }
+    return nearest ? Number(nearest.dataset.index) : null;
+  };
+
+  const update = () => {
+    if (!press?.ghost) return;
+    press.ghost.style.left = `${press.x - press.offX}px`;
+    press.ghost.style.top = `${press.y - press.offY}px`;
+    press.to = targetAt(press.x, press.y);
+    for (const n of picks()) n.classList.toggle('drop-target', Number(n.dataset.index) === press.to && press.to !== press.from);
+    press.scroll = press.y < 70 ? -1 : press.y > window.innerHeight - 70 ? 1 : 0; // scroll near the screen edge
+  };
+
+  const loop = () => {
+    if (!press?.ghost) return;
+    if (press.scroll) {
+      window.scrollBy(0, press.scroll * 14);
+      update();
+    }
+    press.raf = requestAnimationFrame(loop);
+  };
+
+  const begin = () => {
+    const r = press.li.getBoundingClientRect();
+    press.offX = press.startX - r.left;
+    press.offY = press.startY - r.top;
+    // the copy sits in a bare clone of the list so it keeps the list's styles
+    const ghost = list.cloneNode(false);
+    ghost.removeAttribute('id');
+    ghost.classList.add('drag-ghost');
+    const copy = press.li.cloneNode(true);
+    copy.removeAttribute('data-index');
+    copy.removeAttribute('tabindex');
+    ghost.append(copy);
+    ghost.style.width = `${r.width}px`;
+    document.body.append(ghost);
+    press.ghost = ghost;
+    press.li.classList.add('drag-source');
+    document.body.classList.add('is-dragging');
+    update();
+    loop();
+  };
+
+  const finish = (commit) => {
+    const { from, to } = press;
+    clearTimeout(press.timer);
+    cancelAnimationFrame(press.raf);
+    press.ghost?.remove();
+    press.li.classList.remove('drag-source');
+    for (const n of picks()) n.classList.remove('drop-target');
+    document.body.classList.remove('is-dragging');
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onCancel);
+    document.removeEventListener('keydown', onKey);
+    const dragged = Boolean(press.ghost);
+    press = null;
+    if (commit && dragged && to != null && to !== from) reorder(from, to);
+  };
+
+  const onMove = (ev) => {
+    if (!press || ev.pointerId !== press.pointerId) return;
+    press.x = ev.clientX;
+    press.y = ev.clientY;
+    if (press.ghost) return update();
+    const moved = Math.hypot(press.x - press.startX, press.y - press.startY);
+    if (press.touchLike && moved > SLOP_PX) finish(false); // the finger is scrolling, not dragging
+    else if (!press.touchLike && moved > MOVE_PX) begin();
+  };
+  const onUp = (ev) => press && ev.pointerId === press.pointerId && finish(true);
+  const onCancel = (ev) => press && ev.pointerId === press.pointerId && finish(false);
+  const onKey = (ev) => ev.key === 'Escape' && press && finish(false);
+
+  list.addEventListener('pointerdown', (ev) => {
+    const li = ev.target.closest('[data-index]');
+    if (press || !li || ev.target.closest('button') || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+    const touchLike = ev.pointerType !== 'mouse';
+    press = { li, from: Number(li.dataset.index), to: null, pointerId: ev.pointerId, startX: ev.clientX, startY: ev.clientY, x: ev.clientX, y: ev.clientY, touchLike, ghost: null, raf: 0, scroll: 0 };
+    if (touchLike) press.timer = setTimeout(() => press && !press.ghost && begin(), HOLD_MS);
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onCancel);
+    document.addEventListener('keydown', onKey);
+  });
+
+  // once a drag is live, keep the page from scrolling or selecting text under the finger
+  list.addEventListener('touchmove', (ev) => press?.ghost && ev.preventDefault(), { passive: false });
+  list.addEventListener('selectstart', (ev) => press && ev.preventDefault());
+  list.addEventListener('contextmenu', (ev) => press && ev.preventDefault());
 }
 
 // ---- editor ---------------------------------------------------------------------------------
@@ -111,18 +242,24 @@ function renderDraft() {
   const { kind, items } = draft;
   $('count').textContent = `(${items.length} / ${KINDS[kind].max})`;
   const empty = !items.length && kind === 'top10';
-  $('preview').replaceChildren(
-    empty ? el('p', { className: 'muted', textContent: 'Pick titles from your library to build the list.' }) : renderList(kind, items, move, remove),
-  );
+  let list = null;
+  if (!empty) {
+    list = renderList(kind, items, { reorder, remove });
+    makeSortable(list, reorder);
+  }
+  $('preview').replaceChildren(list ?? el('p', { className: 'muted', textContent: 'Pick titles from your library to build the list.' }));
+  $('reorder-hint').hidden = items.length < 2;
   $('save-list').disabled = !items.length;
   renderPicker();
 }
 
-function move(i, delta) {
-  const j = i + delta;
-  if (j < 0 || j >= draft.items.length) return;
-  [draft.items[i], draft.items[j]] = [draft.items[j], draft.items[i]];
+// Moves the pick at `from` so it ends up at `to`, shifting the ones in between.
+function reorder(from, to, keepFocus = false) {
+  if (from === to || to < 0 || to >= draft.items.length) return;
+  const [moved] = draft.items.splice(from, 1);
+  draft.items.splice(to, 0, moved);
   renderDraft();
+  if (keepFocus) $('preview').querySelector(`[data-index="${to}"]`)?.focus();
 }
 
 function remove(i) {

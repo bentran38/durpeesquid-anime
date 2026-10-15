@@ -528,7 +528,7 @@ const SORTS = {
   time: { get: (e) => minutesWatched(e), desc: true, label: { desc: 'Most first', asc: 'Least first' } },
   finished: { get: (e) => e.finished_on, desc: true, label: { desc: 'Newest first', asc: 'Oldest first' } },
 };
-let sortDesc = SORTS.added.desc;
+let sortDesc = SORTS.rating.desc; // the library opens sorted by rating (matches the selected option in index.html)
 
 function compareBy(sort) {
   return (a, b) => {

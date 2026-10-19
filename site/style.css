@@ -301,3 +301,33 @@ body { transition: background 0.3s, color 0.3s; }
 .star { position: absolute; top: 6px; right: 6px; padding: 2px 8px; border-radius: 99px; background: rgba(10, 10, 11, 0.8); color: #fff; font: 600 0.72rem var(--mono); }
 .wall-info { display: grid; gap: 4px; justify-items: start; }
 .wall-title { font-size: 0.85rem; font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Standardized sizing: every row/card has the same columns and heights, long text is clamped. */
+:root { --poster-w: 56px; --poster-h: 80px; --pill-w: 6.5rem; }
+.entry { align-items: center; }
+.library[data-layout=list] .entry { min-height: calc(var(--poster-h) + 28px); }
+.library[data-layout=list] .rank { width: 3ch; min-width: 3ch; }
+.entry .head { display: grid; grid-template-columns: minmax(0, 1fr) var(--pill-w); align-items: center; gap: 4px 12px; }
+.entry h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pill { display: block; width: 100%; text-align: center; padding: 1px 0; }
+.entry .meta, .entry .progress { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entry .advanced .meta { white-space: normal; }
+.entry .progress:empty { display: block; visibility: hidden; height: 1.3em; }
+.entry .progress:empty::before { content: '\00a0'; }
+/* grid layout: 2-line title area of fixed height so tiles line up */
+.library[data-layout=grid] { align-items: stretch; }
+.library[data-layout=grid] .entry { align-items: stretch; }
+.library[data-layout=grid] .entry .head { grid-template-columns: 1fr; }
+.library[data-layout=grid] .entry h2 { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2.6em; line-height: 1.3; }
+.library[data-layout=grid] .pill { width: auto; justify-self: start; padding: 1px 10px; }
+.library[data-layout=grid] .entry .main { display: flex; flex-direction: column; }
+/* search results, picker and top-10 rows share one poster size and one-line names */
+.info > span:first-child, .results .info > span:first-child { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.info small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.results li, .picker li, .top10 li { min-height: 72px; }
+.results .poster, .picker .poster, .top10 .poster { width: 42px; height: 60px; }
+.list-card h3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wall-title { min-height: 2.6em; line-height: 1.3; }
+.person-link > :not(.avatar) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entry .progress { height: 1.4em; line-height: 1.4; }
+.entry .progress:empty { height: 1.4em; }

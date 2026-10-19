@@ -82,7 +82,7 @@ function resultRow(r) {
   const btn = el('button', { type: 'button', textContent: have ? 'In library' : 'Add', disabled: have });
   const li = el(
     'li',
-    { className: have ? 'have' : '' },
+    { className: have ? 'have' : '', title: r.title },
     poster(r.poster_url, r.title, 'poster'),
     el('div', { className: 'info' }, el('span', { textContent: r.title }), el('small', { textContent: sub })),
     btn,
@@ -426,8 +426,8 @@ function entryCard(e, position) {
     el(
       'div',
       { className: 'main' },
-      el('div', { className: 'head' }, el('h2', { textContent: e.title }), pill),
-      el('p', { className: 'meta', textContent: shortMeta }),
+      el('div', { className: 'head' }, el('h2', { textContent: e.title, title: e.title }), pill),
+      el('p', { className: 'meta', textContent: shortMeta, title: shortMeta }),
       progress,
       advanced,
     ),

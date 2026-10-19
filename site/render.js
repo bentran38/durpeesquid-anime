@@ -66,7 +66,7 @@ export function renderList(kind, items, edit) {
             { title: edit ? '' : it.title },
             el('span', { className: 'num', textContent: String(i + 1) }),
             poster(it.poster_url, 'poster'),
-            el('div', { className: 'info' }, el('span', { textContent: it.title }), el('small', { textContent: meta(it) })),
+            el('div', { className: 'info' }, el('span', { className: 'name', textContent: it.title }), el('small', { textContent: meta(it) })),
             removeButton(i),
           ),
           i,

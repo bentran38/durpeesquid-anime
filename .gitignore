@@ -27,3 +27,8 @@ dist-ssr
 
 # generated from env vars by scripts/gen-config.js
 site/config.js
+
+# secrets
+.env
+.env.*
+!.env.example
